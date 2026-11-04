@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f1e8">
+<title>Dates</title>
+<style>
+  :root {
+    --bg: #f7f1e8;
+    --card: #fffaf3;
+    --ink: #3a2e28;
+    --muted: #8c7b70;
+    --pink: #a84b44;
+    --lock-pink: #e8a598;
+    --maroon: #c2614f;
+    --line: #eadfd2;
+    --today: #f6e2d2;
+    --tabbar: #fffaf3;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  button, .entry, .cal-cell, .chip, .tab { outline: none; }
+  button:focus-visible, .cal-cell:focus-visible { outline: 2px solid var(--maroon); outline-offset: 2px; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased;
+  }
+  header { padding: 18px 16px 8px; display: flex; justify-content: space-between; align-items: center; max-width: 640px; margin: 0 auto; }
+  h1 { margin: 0; font-size: 24px; }
+  .add-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--maroon);
+    color: #fff; font-size: 24px; line-height: 1; cursor: pointer;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 4px 16px 130px; }
+  .search {
+    width: 100%; padding: 12px 14px; border-radius: 14px; border: none; background: var(--card);
+    color: var(--ink); font: inherit; font-size: 16px; margin-bottom: 12px; outline: none;
+  }
+  .chips { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; }
+  .chip {
+    padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent;
+    color: var(--muted); font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap;
+  }
+  .chip.active { background: var(--maroon); color: #fff; border-color: var(--maroon); font-weight: 600; }
+  .hero { background: var(--maroon); border-radius: 24px; padding: 20px; margin-bottom: 14px; }
+  .hero .label { font-size: 13px; color: #fff9f4; }
+  .hero .big { font-size: 34px; font-weight: 700; margin: 4px 0; }
+  .hero .sub { font-size: 14px; color: #fff1ea; }
+  .section { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 20px 4px 8px; }
+  .entry {
+    background: var(--card); border-radius: 20px; padding: 14px; margin-bottom: 10px;
+    display: flex; gap: 14px; align-items: center; cursor: pointer;
+  }
+  .entry.today { background: var(--today); }
+  .badge {
+    flex: none; width: 54px; height: 54px; border-radius: 16px; background: var(--maroon);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;
+  }
+  .badge .m { font-size: 11px; text-transform: uppercase; color: #fff9f4; }
+  .badge .d { font-size: 20px; font-weight: 700; color: #fff; }
+  .body { flex: 1; min-width: 0; }
+  .name { font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .countdown { font-size: 14px; font-weight: 700; color: var(--pink); white-space: nowrap; }
+  .empty { text-align: center; color: var(--muted); padding: 60px 20px; line-height: 1.6; }
+
+  .tabbar {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    width: min(92vw, 420px); background: var(--tabbar); border-radius: 999px;
+    display: flex; align-items: center; padding: 8px; gap: 4px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.15); z-index: 20;
+  }
+  .tab {
+    flex: 1; border: none; background: transparent; color: var(--ink); font: inherit; font-size: 16px;
+    font-weight: 600; padding: 13px 0; border-radius: 999px; cursor: pointer;
+  }
+  .tab.active { background: var(--maroon); color: #fff; }
+  .gear {
+    flex: none; width: 50px; height: 50px; border: none; background: transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; color: var(--ink); border-radius: 50%;
+  }
+  .gear svg { width: 26px; height: 26px; fill: var(--ink); }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; z-index: 30; }
+  .overlay.open { display: block; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; max-height: 92vh; overflow-y: auto;
+    background: var(--bg); border-radius: 26px 26px 0 0; padding: 20px 18px 30px;
+    transform: translateY(105%); transition: transform .28s ease; z-index: 31; max-width: 640px; margin: 0 auto;
+  }
+  .sheet.open { transform: translateY(0); }
+  .sheet::before {
+    content: ""; display: block; width: 40px; height: 5px; border-radius: 999px;
+    background: var(--line); margin: -8px auto 14px;
+  }
+  .sheet h2 { margin: 0 0 8px; font-size: 20px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+  input, select, textarea {
+    width: 100%; padding: 12px 14px; border: none; border-radius: 14px; background: var(--card);
+    color: var(--ink); font: inherit; font-size: 16px; outline: none;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .btn {
+    font: inherit; font-size: 15px; font-weight: 600; border: none; border-radius: 999px;
+    padding: 12px 20px; background: var(--maroon); color: #fff; cursor: pointer;
+  }
+  .btn.ghost { background: var(--card); color: var(--pink); }
+  .btn.danger { background: transparent; color: #b03a2e; }
+  .row-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+  .row-btns.end { justify-content: flex-end; }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+  .msg { background: var(--card); border-radius: 16px; padding: 14px; font-size: 15px; margin-top: 8px; white-space: pre-wrap; }
+  .detail-big { font-size: 22px; font-weight: 700; margin-top: 6px; }
+
+  .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+  .setting-row > div:first-child { flex: 1; min-width: 0; }
+  .switch { position: relative; display: inline-block; width: 52px; height: 31px; flex: none; }
+  .switch input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; padding: 0; }
+  .slider {
+    position: absolute; inset: 0; background: #d8cbbd; border-radius: 999px; cursor: pointer; transition: background .2s;
+  }
+  .slider::before {
+    content: ""; position: absolute; width: 27px; height: 27px; left: 2px; top: 2px;
+    background: #fff; border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+  .switch input:checked + .slider { background: var(--maroon); }
+  .switch input:checked + .slider::before { transform: translateX(21px); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%); background: var(--ink); color: var(--bg);
+    padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 600; opacity: 0;
+    transition: opacity .2s; pointer-events: none; z-index: 40;
+  }
+  .toast.show { opacity: 1; }
+
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 12px; }
+  .cal-title { font-size: 18px; font-weight: 700; }
+  .nav-btn {
+    width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--card);
+    color: var(--pink); font-size: 22px; cursor: pointer;
+  }
+  .cal-week, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-week span { text-align: center; font-size: 12px; color: var(--muted); padding: 4px 0; }
+  .cal-cell {
+    aspect-ratio: 1 / 1; border-radius: 12px; background: var(--card); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-size: 15px; cursor: pointer; gap: 3px;
+  }
+  .cal-cell.blank { background: transparent; cursor: default; }
+  .cal-cell.today { outline: 2px solid var(--pink); }
+  .cal-cell.selected { background: var(--maroon); }
+  .dots { display: flex; gap: 3px; height: 6px; }
+  .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--pink); }
+  .dot.anniversary { background: #5a7fb8; }
+  .legend { display: flex; gap: 16px; justify-content: center; font-size: 13px; color: var(--muted); margin-top: 14px; }
+  .legend .dot { margin-right: 6px; }
+
+  @keyframes pop {
+    from { opacity: 0; transform: scale(.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  main.pop { animation: pop .45s cubic-bezier(.2, .9, .3, 1.15) both; }
+
+  #lock {
+    position: fixed; inset: 0; background: var(--bg); z-index: 99;
+    display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity .3s ease;
+  }
+  #lock.show { opacity: 1; }
+  #lock.shake .lock-box { animation: shake .4s; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); } 20% { transform: translateX(-10px); }
+    40% { transform: translateX(10px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(6px); }
+  }
+  .lock-box { width: min(86vw, 340px); text-align: center; }
+  .lock-icon { width: 60px; height: 60px; color: var(--maroon); display: block; margin: 0 auto; }
+  .lock-title { font-size: 26px; font-weight: 700; color: var(--ink); margin-top: 26px; }
+  .unlock-btn {
+    margin-top: 40px; width: min(70vw, 240px); padding: 18px 0; border: none; border-radius: 999px;
+    background: var(--maroon); color: #fff; font: inherit; font-size: 19px; font-weight: 600; cursor: pointer;
+  }
+  .pw-area { margin-top: 22px; }
+  .pw-area .lock-row { display: flex; gap: 8px; }
+  #lockInput {
+    flex: 1; background: var(--card); border: none; border-radius: 14px; color: var(--ink);
+    font: inherit; font-size: 17px; padding: 13px 14px; text-align: center; letter-spacing: 2px; outline: none;
+  }
+  #lockGo {
+    background: var(--maroon); color: #fff; border: none; border-radius: 999px; padding: 0 18px;
+    font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .link-btn {
+    margin-top: 18px; background: none; border: none; color: var(--pink); font: inherit; font-size: 14px;
+    cursor: pointer; text-decoration: underline;
+  }
+  #lockMsg { min-height: 20px; margin-top: 14px; font-size: 14px; color: #b03a2e; }
+
+  .sec-label { font-size: 12px; color: var(--pink); text-transform: uppercase; letter-spacing: .08em; margin: 22px 6px 8px; font-weight: 600; }
+  .card { background: var(--card); border-radius: 22px; overflow: hidden; }
+  .row {
+    display: flex; align-items: center; gap: 14px; padding: 15px 16px; border-bottom: 1px solid var(--line);
+    width: 100%;
+  }
+  .row:last-child { border-bottom: none; }
+  button.row { background: none; border: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .ico { width: 26px; height: 26px; flex: none; color: var(--muted); display: flex; align-items: center; justify-content: center; }
+  .ico svg { width: 24px; height: 24px; fill: currentColor; }
+  .rtext { flex: 1; min-width: 0; }
+  .rtitle { font-size: 16px; font-weight: 600; }
+  .rsub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .chev { color: var(--muted); font-size: 24px; line-height: 1; }
+  .row-extra { padding: 0 16px 16px; border-bottom: 1px solid var(--line); }
+  .row-extra input { margin-top: 0; }
+  .inline-select { width: auto !important; padding: 8px 10px !important; font-size: 14px !important; border-radius: 10px !important; }
+
+  .btn, .row, .entry, .chip, .nav-btn, .cal-cell { transition: transform .12s ease, background .2s ease; }
+  .btn:active, .nav-btn:active, .chip:active { transform: scale(.96); }
+  .entry:active, .row.action:active { transform: scale(.98); background: var(--today); }
+  .cal-cell:active { transform: scale(.94); }
+
+  .swipe { position: relative; overflow: hidden; border-radius: 20px; margin-bottom: 10px; }
+  .swipe .entry { margin-bottom: 0; position: relative; z-index: 1; transition: transform .25s ease; }
+  .swipe.open .entry { transform: translateX(-150px); }
+  .swipe-actions { position: absolute; right: 0; top: 0; bottom: 0; width: 150px; display: flex; }
+  .swipe-actions button {
+    flex: 1; border: none; color: #fff; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .sw-edit { background: #5a7fb8; }
+  .sw-del { background: #b03a2e; }
+
+  #aboutPage {
+    position: fixed; inset: 0; background: var(--bg); z-index: 35; overflow-y: auto; padding: 0 16px 40px;
+    transform: translateX(100%); transition: transform .3s ease;
+  }
+  #aboutPage.open { transform: translateX(0); }
+  .about-head { display: flex; align-items: center; gap: 10px; padding: 18px 0 14px; max-width: 640px; margin: 0 auto; }
+  .about-head h2 { margin: 0; font-size: 22px; }
+  .back-btn {
+    background: none; border: none; padding: 6px; cursor: pointer; color: var(--ink);
+    width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  }
+  .back-btn svg { width: 26px; height: 26px; fill: currentColor; }
+  #aboutPage .card { max-width: 640px; margin: 8px auto 0; }
+  #aboutPage .row .ico { color: var(--muted); }
+  #privacySheet { z-index: 41; }
+  #privacySheet .msg { white-space: pre-line; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="pageTitle">Overview</h1>
+  <button class="add-btn" id="addBtn" data-i18n-aria="addDate" aria-label="Add a date">+</button>
+</header>
+
+<main class="pop">
+  <div id="view"></div>
+</main>
+
+<nav class="tabbar">
+  <button class="tab active" data-view="overview" data-i18n="overview">Overview</button>
+  <button class="tab" data-view="live" data-i18n="live">Live</button>
+  <button class="tab" data-view="calendar" data-i18n="calendar">Calendar</button>
+  <button class="gear" id="gearBtn" data-i18n-aria="settings" aria-label="Settings">
+    <svg viewBox="0 0 24 24"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3h-4l-.4 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1L11 21h4l.4-2.7a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+  </button>
+</nav>
+
+<div class="overlay" id="overlay"></div>
+
+<div class="sheet" id="editSheet">
+  <h2 id="editTitle">Add a date</h2>
+  <label data-i18n="type">Type</label>
+  <select id="fType">
+    <option value="birthday" data-i18n="birthday">Birthday</option>
+    <option value="anniversary" data-i18n="anniversary">Anniversary</option>
+  </select>
+  <label data-i18n="nameLabel">Name (or couple, e.g. "Sam & Jo")</label>
+  <input id="fName" data-i18n-ph="namePh" placeholder="e.g. Maya">
+  <label data-i18n="relLabel">Relationship</label>
+  <input id="fRel" data-i18n-ph="relPh" placeholder="e.g. Sister, Coworker, Partner">
+  <label data-i18n="dateLabel">Date</label>
+  <input id="fDate" type="date">
+  <div class="hint" data-i18n="dateHint">Add the year to see age or years together.</div>
+  <label data-i18n="remindLabel">Remind me</label>
+  <select id="fRemind">
+    <option value="0" data-i18n="remind0">On the day</option>
+    <option value="1" data-i18n="remind1">1 day before</option>
+    <option value="3" selected data-i18n="remind3">3 days before</option>
+    <option value="7" data-i18n="remind7">1 week before</option>
+    <option value="14" data-i18n="remind14">2 weeks before</option>
+  </select>
+  <label data-i18n="notesLabel">Notes (gift ideas, plans)</label>
+  <textarea id="fNotes"></textarea>
+  <div class="row-btns end">
+    <button class="btn danger" id="fDelete" style="display:none" data-i18n="delete">Delete</button>
+    <button class="btn ghost" id="fCancel" data-i18n="cancel">Cancel</button>
+    <button class="btn" id="fSave" data-i18n="save">Save</button>
+  </div>
+</div>
+
+<div class="sheet" id="detailSheet"><div id="detailBody"></div></div>
+
+<div class="sheet" id="settingsSheet">
+  <h2 data-i18n="settings">Settings</h2>
+
+  <div class="sec-label" data-i18n="reminders">Reminders</div>
+  <div class="card">
+    <div class="row">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6V11a6 6 0 0 0-5-5.9V4a1 1 0 0 0-2 0v1.1A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="notifications">Notifications</div>
+        <div class="rsub" data-i18n="notificationsSub">Alerts when a date is coming up</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="notifyToggle"><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <div class="sec-label" data-i18n="security">Security</div>
+  <div class="card">
+    <div class="row">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="passwordLock">Password lock</div>
+        <div class="rsub" id="pwStatus" data-i18n="off">Off.</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="pwToggle"><span class="slider"></span></label>
+    </div>
+    <div id="pwFields" class="row-extra" style="display:none">
+      <input type="password" id="pwNew" data-i18n-ph="pwNewPh" placeholder="New password" autocomplete="new-password">
+      <input type="password" id="pwConfirm" data-i18n-ph="pwConfirmPh" placeholder="Confirm password" style="margin-top:8px" autocomplete="new-password">
+      <div class="hint" data-i18n="pwHint">Saves automatically once both match (at least 4 characters).</div>
+    </div>
+    <div class="row">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 11a1 1 0 0 1 1 1c0 3-.5 6-2 8h-1c1.3-2.5 2-5.5 2-8a1 1 0 0 1 1-1zm-4 1a4 4 0 0 1 8 0c0 2.5-.3 4.5-.9 6.5l-1-.3c.5-2 .9-4 .9-6.2a3 3 0 0 0-6 0c0 2-.2 4-.8 6l-1-.3c.6-2 .8-4 .8-5.7zM12 4a7 7 0 0 1 7 7c0 1.5-.2 3-.6 4.5l-1-.3c.4-1.4.6-2.8.6-4.2a6 6 0 0 0-12 0c0 1.4-.1 2.8-.4 4.2l-1 .3C4.2 14 4 12.5 4 11a8 8 0 0 1 8-7z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="fingerprint">Fingerprint or face</div>
+        <div class="rsub" id="bioStatus" data-i18n="off">Off.</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="bioToggle"><span class="slider"></span></label>
+    </div>
+    <div class="row">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5v5l3 2-1 1.7-4-2.4V7z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="autoLock">Auto-lock</div>
+        <div class="rsub" data-i18n="autoLockSub">Lock when the app goes to the background</div>
+      </div>
+      <select id="autoLock" class="inline-select">
+        <option value="0" data-i18n="autoImmediately">Immediately</option>
+        <option value="1" data-i18n="autoMin1">After 1 min</option>
+        <option value="5" data-i18n="autoMin5">After 5 min</option>
+        <option value="never" data-i18n="autoNever">Never</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="sec-label" data-i18n="data">Data</div>
+  <div class="card">
+    <button class="row action" id="exportBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v11l4-4 1.4 1.4L12 18.8 6.6 11.4 8 10l4 4V3zM4 19h16v2H4z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="exportBackup">Export backup</div>
+        <div class="rsub" data-i18n="exportSub">Save all your dates to a file</div>
+      </div>
+      <span class="chev">›</span>
+    </button>
+    <button class="row action" id="importBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 21V10l-4 4-1.4-1.4L12 5.2l5.4 7.4L16 14l-4-4v11zM4 3h16v2H4z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="importBackup">Import backup</div>
+        <div class="rsub" data-i18n="importSub">Restore dates from a file</div>
+      </div>
+      <span class="chev">›</span>
+    </button>
+    <input type="file" id="importFile" accept="application/json" style="display:none">
+  </div>
+
+  <div class="sec-label" data-i18n="info">Info</div>
+  <div class="card">
+    <div class="row">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 6h-3a15 15 0 0 0-1.3-3.6A8 8 0 0 1 18.9 8zM12 4c.8 1.2 1.5 2.5 1.9 4h-3.8c.4-1.5 1.1-2.8 1.9-4zM4.3 14a8 8 0 0 1 0-4h3.4a16 16 0 0 0 0 4H4.3zm.8 2h3a15 15 0 0 0 1.3 3.6A8 8 0 0 1 5.1 16zm3-8h-3a8 8 0 0 1 4.3-3.6A15 15 0 0 0 8.1 8zM12 20c-.8-1.2-1.5-2.5-1.9-4h3.8c-.4 1.5-1.1 2.8-1.9 4zm2.3-6H9.7a14 14 0 0 1 0-4h4.6a14 14 0 0 1 0 4zm.3 5.6c.6-1.1 1.1-2.3 1.3-3.6h3a8 8 0 0 1-4.3 3.6zm1.7-5.6a16 16 0 0 0 0-4h3.4a8 8 0 0 1 0 4h-3.4z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="language">Language</div>
+        <div class="rsub" data-i18n="languageSub">Choose the app's language</div>
+      </div>
+      <select id="langSelect" class="inline-select">
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="es">Español</option>
+      </select>
+    </div>
+    <button class="row action" id="aboutBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="aboutApp">About the app</div>
+        <div class="rsub" data-i18n="aboutSub">Website, privacy policy and version</div>
+      </div>
+      <span class="chev">›</span>
+    </button>
+  </div>
+
+  <div class="row-btns end">
+    <button class="btn ghost" id="closeSettings" data-i18n="done">Done</button>
+  </div>
+</div>
+
+<div id="lock">
+  <div class="lock-box">
+    <svg class="lock-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8 10V7.5a4 4 0 0 1 8 0V10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+      <rect x="5" y="10" width="14" height="11" rx="2.5" fill="currentColor"/>
+      <circle cx="12" cy="15.5" r="1.7" fill="#f7f1e8"/>
+    </svg>
+    <div class="lock-title" data-i18n="lockTitle">Dates is locked</div>
+    <button class="unlock-btn" id="unlockBtn" data-i18n="unlock">Unlock</button>
+    <div class="pw-area" id="pwArea" style="display:none">
+      <div class="lock-row">
+        <input id="lockInput" type="password" data-i18n-ph="passwordPh" placeholder="Password" autocomplete="current-password">
+        <button id="lockGo" data-i18n="enter">Enter</button>
+      </div>
+    </div>
+    <button class="link-btn" id="usePwBtn" style="display:none" data-i18n="usePassword">Use password instead</button>
+    <div id="lockMsg"></div>
+  </div>
+</div>
+
+<div id="aboutPage">
+  <div class="about-head">
+    <button class="back-btn" id="aboutBack" data-i18n-aria="back" aria-label="Back">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg>
+    </button>
+    <h2 data-i18n="aboutApp">About the app</h2>
+  </div>
+  <div class="card">
+    <button class="row action" id="websiteBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 6h-3a15 15 0 0 0-1.3-3.6A8 8 0 0 1 18.9 8zM12 4c.8 1.2 1.5 2.5 1.9 4h-3.8c.4-1.5 1.1-2.8 1.9-4zM4.3 14a8 8 0 0 1 0-4h3.4a16 16 0 0 0 0 4H4.3zm.8 2h3a15 15 0 0 0 1.3 3.6A8 8 0 0 1 5.1 16zm3-8h-3a8 8 0 0 1 4.3-3.6A15 15 0 0 0 8.1 8zM12 20c-.8-1.2-1.5-2.5-1.9-4h3.8c-.4 1.5-1.1 2.8-1.9 4zm2.3-6H9.7a14 14 0 0 1 0-4h4.6a14 14 0 0 1 0 4zm.3 5.6c.6-1.1 1.1-2.3 1.3-3.6h3a8 8 0 0 1-4.3 3.6zm1.7-5.6a16 16 0 0 0 0-4h3.4a8 8 0 0 1 0 4h-3.4z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="website">Website</div>
+        <div class="rsub" data-i18n="websiteSub">Open this app's page</div>
+      </div>
+      <span class="chev">›</span>
+    </button>
+    <button class="row action" id="privacyBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="privacyPolicy">Privacy policy</div>
+        <div class="rsub" data-i18n="privacySub">How your data is handled</div>
+      </div>
+      <span class="chev">›</span>
+    </button>
+    <div class="row">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="version">Version</div>
+        <div class="rsub" style="color:var(--pink)">1.0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="privacySheet">
+  <h2 data-i18n="privacyPolicy">Privacy policy</h2>
+  <div class="msg" id="privacyText"></div>
+  <div class="row-btns end">
+    <button class="btn ghost" id="privacyClose" data-i18n="done">Done</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const KEY = "bday-reminder-v1";
+  const PW_KEY = "bday-reminder-pw";
+  const BIO_KEY = "bday-reminder-bio";
+  const NOTIFY_OFF = "bday-reminder-notify-off";
+  const AL_KEY = "bday-reminder-autolock";
+  const LANG_KEY = "bday-reminder-lang";
+
+  const LOCALES = { en: "en-US", fr: "fr-CA", es: "es-ES" };
+
+  const T = {
+    en: {
+      overview: "Overview", live: "Live", calendar: "Calendar",
+      addDate: "Add a date", editTitle: "Edit", back: "Back",
+      type: "Type", birthday: "Birthday", anniversary: "Anniversary",
+      nameLabel: 'Name (or couple, e.g. "Sam & Jo")', namePh: "e.g. Maya",
+      relLabel: "Relationship", relPh: "e.g. Sister, Coworker, Partner",
+      dateLabel: "Date", dateHint: "Add the year to see age or years together.",
+      remindLabel: "Remind me", remind0: "On the day", remind1: "1 day before", remind3: "3 days before",
+      remind7: "1 week before", remind14: "2 weeks before",
+      notesLabel: "Notes (gift ideas, plans)",
+      delete: "Delete", tapAgain: "Tap again to delete", cancel: "Cancel", save: "Save",
+      settings: "Settings", reminders: "Reminders", security: "Security", data: "Data", info: "Info",
+      notifications: "Notifications", notificationsSub: "Alerts when a date is coming up",
+      passwordLock: "Password lock", off: "Off.", pwOnStatus: "On. The app asks for it when it opens.",
+      pwNewPh: "New password", pwConfirmPh: "Confirm password",
+      pwHint: "Saves automatically once both match (at least 4 characters).",
+      fingerprint: "Fingerprint or face", fpOnStatus: "On. Unlock with your fingerprint or face.",
+      autoLock: "Auto-lock", autoLockSub: "Lock when the app goes to the background",
+      autoImmediately: "Immediately", autoMin1: "After 1 min", autoMin5: "After 5 min", autoNever: "Never",
+      exportBackup: "Export backup", exportSub: "Save all your dates to a file",
+      importBackup: "Import backup", importSub: "Restore dates from a file",
+      language: "Language", languageSub: "Choose the app's language",
+      aboutApp: "About the app", aboutSub: "Website, privacy policy and version",
+      website: "Website", websiteSub: "Open this app's page",
+      privacyPolicy: "Privacy policy", privacySub: "How your data is handled", version: "Version",
+      privacyText: "Dates has no accounts and no servers. Everything you enter, including names, dates, and notes, is stored only in this browser on this device. Nothing is sent anywhere.\n\nYour password is stored on this device as a scrambled version, not as plain text. Fingerprint or face unlock is handled by your device. The app only learns whether it passed.\n\nIf you clear your browser data, your dates and settings are removed. Export a backup file first if you want a copy.",
+      done: "Done",
+      lockTitle: "Dates is locked", unlock: "Unlock", usePassword: "Use password instead",
+      passwordPh: "Password", enter: "Enter", wrongPassword: "Wrong password", couldntVerify: "Couldn't verify.",
+      messageIdea: "Message idea", copyMessage: "Copy message", copied: "Copied", close: "Close",
+      nextUp: "Next up", next30: "Next 30 days", nothingIn30: "Nothing in the next 30 days.",
+      noDates: "No dates yet.<br>Tap + to add a birthday or anniversary.", nothingMatches: "Nothing matches that.",
+      nothingHere: "Nothing here yet. Add a date and it will show up here when it's close.",
+      searchPh: "Search names or notes", all: "All", birthdays: "Birthdays", anniversaries: "Anniversaries",
+      addName: "Add a name", pickDate: "Pick a date", saved: "Saved", deleted: "Deleted",
+      notSupported: "Not supported here", notifOn: "Notifications on", notifBlocked: "Notifications blocked",
+      needHttps: "Open the app over https to use this", cancelledBlocked: "Cancelled, or this device blocked it",
+      cantSetup: n => `Can't set up here: ${n}`, unknownError: "unknown error",
+      fpEnabled: "Fingerprint or face on", fpDisabled: "Fingerprint or face off",
+      pwSaved: "Password saved", pwOff: "Password lock off", pwMin: "Use at least 4 characters",
+      imported: n => `Imported ${n} dates`, fileBad: "That file didn't work",
+      nothingOn: (m, d) => `Nothing on ${m} ${d}.`,
+      todayLbl: "Today", tomorrow: "Tomorrow",
+      inDays: n => `In ${n} days`, inWeeks: n => `In ${n} weeks`, inMonths: n => `In ${n} months`,
+      turns: n => `turns ${n}`, years: n => `${n} yr${n === 1 ? "" : "s"}`,
+      wishBirthday: name => `Happy birthday, ${name}! 🎉`,
+      wishAnnivYears: (name, n) => `Happy ${n}-year anniversary, ${name}! 💛`,
+      wishAnniv: name => `Happy anniversary, ${name}! 💛`,
+      notifToday: name => `Today: ${name}`,
+      notifIn: (name, n) => `${name} in ${n} day${n === 1 ? "" : "s"}`,
+      birthdayComing: "Birthday coming up", anniversaryComing: "Anniversary coming up",
+      dateCount: n => `${n} dates`
+    },
+    fr: {
+      overview: "Aperçu", live: "En direct", calendar: "Calendrier",
+      addDate: "Ajouter une date", editTitle: "Modifier", back: "Retour",
+      type: "Type", birthday: "Anniversaire", anniversary: "Anniversaire de couple",
+      nameLabel: 'Nom (ou couple, ex. « Sam et Jo »)', namePh: "ex. Maya",
+      relLabel: "Lien", relPh: "ex. Sœur, Collègue, Partenaire",
+      dateLabel: "Date", dateHint: "Ajoutez l'année pour voir l'âge ou les années ensemble.",
+      remindLabel: "Rappel", remind0: "Le jour même", remind1: "1 jour avant", remind3: "3 jours avant",
+      remind7: "1 semaine avant", remind14: "2 semaines avant",
+      notesLabel: "Notes (idées de cadeaux, projets)",
+      delete: "Supprimer", tapAgain: "Appuyez encore pour supprimer", cancel: "Annuler", save: "Enregistrer",
+      settings: "Réglages", reminders: "Rappels", security: "Sécurité", data: "Données", info: "Infos",
+      notifications: "Notifications", notificationsSub: "Alertes quand une date approche",
+      passwordLock: "Verrou par mot de passe", off: "Désactivé.", pwOnStatus: "Activé. L'app le demande à l'ouverture.",
+      pwNewPh: "Nouveau mot de passe", pwConfirmPh: "Confirmer le mot de passe",
+      pwHint: "Enregistré automatiquement une fois les deux identiques (au moins 4 caractères).",
+      fingerprint: "Empreinte ou visage", fpOnStatus: "Activé. Déverrouillez avec votre empreinte ou votre visage.",
+      autoLock: "Verrouillage auto", autoLockSub: "Verrouiller quand l'app passe en arrière-plan",
+      autoImmediately: "Immédiatement", autoMin1: "Après 1 min", autoMin5: "Après 5 min", autoNever: "Jamais",
+      exportBackup: "Exporter une sauvegarde", exportSub: "Enregistrer toutes vos dates dans un fichier",
+      importBackup: "Importer une sauvegarde", importSub: "Restaurer les dates depuis un fichier",
+      language: "Langue", languageSub: "Choisissez la langue de l'app",
+      aboutApp: "À propos", aboutSub: "Site web, confidentialité et version",
+      website: "Site web", websiteSub: "Ouvrir la page de cette app",
+      privacyPolicy: "Confidentialité", privacySub: "Comment vos données sont traitées", version: "Version",
+      privacyText: "Dates n'a ni compte ni serveur. Tout ce que vous saisissez, y compris les noms, dates et notes, est stocké uniquement dans ce navigateur sur cet appareil. Rien n'est envoyé ailleurs.\n\nVotre mot de passe est stocké sur cet appareil sous une forme brouillée, jamais en clair. Le déverrouillage par empreinte ou visage est géré par votre appareil. L'app sait seulement si la vérification a réussi.\n\nSi vous effacez les données de votre navigateur, vos dates et réglages seront supprimés. Exportez une sauvegarde avant si vous voulez une copie.",
+      done: "Terminé",
+      lockTitle: "Dates est verrouillé", unlock: "Déverrouiller", usePassword: "Utiliser le mot de passe",
+      passwordPh: "Mot de passe", enter: "Entrer", wrongPassword: "Mot de passe incorrect", couldntVerify: "Vérification impossible.",
+      messageIdea: "Idée de message", copyMessage: "Copier le message", copied: "Copié", close: "Fermer",
+      nextUp: "Prochain", next30: "Dans les 30 prochains jours", nothingIn30: "Rien dans les 30 prochains jours.",
+      noDates: "Aucune date pour l'instant.<br>Appuyez sur + pour ajouter un anniversaire.", nothingMatches: "Aucun résultat.",
+      nothingHere: "Rien pour l'instant. Ajoutez une date et elle apparaîtra ici à l'approche.",
+      searchPh: "Chercher un nom ou une note", all: "Tous", birthdays: "Anniversaires", anniversaries: "Anniversaires de couple",
+      addName: "Ajoutez un nom", pickDate: "Choisissez une date", saved: "Enregistré", deleted: "Supprimé",
+      notSupported: "Non compatible ici", notifOn: "Notifications activées", notifBlocked: "Notifications bloquées",
+      needHttps: "Ouvrez l'app en https pour utiliser ceci", cancelledBlocked: "Annulé, ou bloqué par l'appareil",
+      cantSetup: n => `Configuration impossible ici : ${n}`, unknownError: "erreur inconnue",
+      fpEnabled: "Empreinte ou visage activé", fpDisabled: "Empreinte ou visage désactivé",
+      pwSaved: "Mot de passe enregistré", pwOff: "Verrou désactivé", pwMin: "Au moins 4 caractères",
+      imported: n => `${n} dates importées`, fileBad: "Ce fichier ne fonctionne pas",
+      nothingOn: (m, d) => `Rien le ${d} ${m}.`,
+      todayLbl: "Aujourd'hui", tomorrow: "Demain",
+      inDays: n => `Dans ${n} jours`, inWeeks: n => `Dans ${n} semaines`, inMonths: n => `Dans ${n} mois`,
+      turns: n => `${n} ans`, years: n => `${n} an${n === 1 ? "" : "s"}`,
+      wishBirthday: name => `Joyeux anniversaire, ${name} ! 🎉`,
+      wishAnnivYears: (name, n) => `Bon ${n} ans, ${name} ! 💛`,
+      wishAnniv: name => `Joyeux anniversaire de couple, ${name} ! 💛`,
+      notifToday: name => `Aujourd'hui : ${name}`,
+      notifIn: (name, n) => `${name} dans ${n} jour${n === 1 ? "" : "s"}`,
+      birthdayComing: "Anniversaire qui approche", anniversaryComing: "Anniversaire de couple qui approche",
+      dateCount: n => `${n} dates`
+    },
+    es: {
+      overview: "Resumen", live: "En vivo", calendar: "Calendario",
+      addDate: "Añadir una fecha", editTitle: "Editar", back: "Volver",
+      type: "Tipo", birthday: "Cumpleaños", anniversary: "Aniversario",
+      nameLabel: 'Nombre (o pareja, p. ej. "Sam y Jo")', namePh: "p. ej. Maya",
+      relLabel: "Relación", relPh: "p. ej. Hermana, Compañera, Pareja",
+      dateLabel: "Fecha", dateHint: "Añade el año para ver la edad o los años juntos.",
+      remindLabel: "Recordar", remind0: "El mismo día", remind1: "1 día antes", remind3: "3 días antes",
+      remind7: "1 semana antes", remind14: "2 semanas antes",
+      notesLabel: "Notas (ideas de regalo, planes)",
+      delete: "Eliminar", tapAgain: "Toca otra vez para eliminar", cancel: "Cancelar", save: "Guardar",
+      settings: "Ajustes", reminders: "Recordatorios", security: "Seguridad", data: "Datos", info: "Información",
+      notifications: "Notificaciones", notificationsSub: "Avisos cuando una fecha se acerca",
+      passwordLock: "Bloqueo con contraseña", off: "Desactivado.", pwOnStatus: "Activado. La app la pide al abrirse.",
+      pwNewPh: "Nueva contraseña", pwConfirmPh: "Confirmar contraseña",
+      pwHint: "Se guarda automáticamente cuando ambas coinciden (mínimo 4 caracteres).",
+      fingerprint: "Huella o rostro", fpOnStatus: "Activado. Desbloquea con tu huella o tu rostro.",
+      autoLock: "Bloqueo automático", autoLockSub: "Bloquear cuando la app pasa a segundo plano",
+      autoImmediately: "Inmediatamente", autoMin1: "Tras 1 min", autoMin5: "Tras 5 min", autoNever: "Nunca",
+      exportBackup: "Exportar copia", exportSub: "Guardar todas tus fechas en un archivo",
+      importBackup: "Importar copia", importSub: "Restaurar fechas desde un archivo",
+      language: "Idioma", languageSub: "Elige el idioma de la app",
+      aboutApp: "Acerca de la app", aboutSub: "Sitio web, privacidad y versión",
+      website: "Sitio web", websiteSub: "Abrir la página de esta app",
+      privacyPolicy: "Política de privacidad", privacySub: "Cómo se manejan tus datos", version: "Versión",
+      privacyText: "Dates no tiene cuentas ni servidores. Todo lo que escribes, incluidos nombres, fechas y notas, se guarda solo en este navegador de este dispositivo. No se envía nada a ningún sitio.\n\nTu contraseña se guarda en este dispositivo de forma cifrada, no en texto plano. El desbloqueo con huella o rostro lo gestiona tu dispositivo. La app solo sabe si la verificación fue correcta.\n\nSi borras los datos del navegador, tus fechas y ajustes se eliminarán. Exporta una copia antes si quieres conservarla.",
+      done: "Listo",
+      lockTitle: "Dates está bloqueado", unlock: "Desbloquear", usePassword: "Usar contraseña",
+      passwordPh: "Contraseña", enter: "Entrar", wrongPassword: "Contraseña incorrecta", couldntVerify: "No se pudo verificar.",
+      messageIdea: "Idea de mensaje", copyMessage: "Copiar mensaje", copied: "Copiado", close: "Cerrar",
+      nextUp: "Próximo", next30: "Próximos 30 días", nothingIn30: "Nada en los próximos 30 días.",
+      noDates: "Aún no hay fechas.<br>Toca + para añadir un cumpleaños o aniversario.", nothingMatches: "No hay coincidencias.",
+      nothingHere: "Aún no hay nada. Añade una fecha y aparecerá aquí cuando se acerque.",
+      searchPh: "Buscar nombres o notas", all: "Todos", birthdays: "Cumpleaños", anniversaries: "Aniversarios",
+      addName: "Añade un nombre", pickDate: "Elige una fecha", saved: "Guardado", deleted: "Eliminado",
+      notSupported: "No compatible aquí", notifOn: "Notificaciones activadas", notifBlocked: "Notificaciones bloqueadas",
+      needHttps: "Abre la app por https para usar esto", cancelledBlocked: "Cancelado, o el dispositivo lo bloqueó",
+      cantSetup: n => `No se puede configurar aquí: ${n}`, unknownError: "error desconocido",
+      fpEnabled: "Huella o rostro activado", fpDisabled: "Huella o rostro desactivado",
+      pwSaved: "Contraseña guardada", pwOff: "Bloqueo desactivado", pwMin: "Usa al menos 4 caracteres",
+      imported: n => `${n} fechas importadas`, fileBad: "Ese archivo no funcionó",
+      nothingOn: (m, d) => `Nada el ${d} de ${m}.`,
+      todayLbl: "Hoy", tomorrow: "Mañana",
+      inDays: n => `En ${n} días`, inWeeks: n => `En ${n} semanas`, inMonths: n => `En ${n} meses`,
+      turns: n => `cumple ${n}`, years: n => `${n} año${n === 1 ? "" : "s"}`,
+      wishBirthday: name => `¡Feliz cumpleaños, ${name}! 🎉`,
+      wishAnnivYears: (name, n) => `¡Felices ${n} años juntos, ${name}! 💛`,
+      wishAnniv: name => `¡Feliz aniversario, ${name}! 💛`,
+      notifToday: name => `Hoy: ${name}`,
+      notifIn: (name, n) => `${name} en ${n} día${n === 1 ? "" : "s"}`,
+      birthdayComing: "Cumpleaños próximo", anniversaryComing: "Aniversario próximo",
+      dateCount: n => `${n} fechas`
+    }
+  };
+
+  function detectLang() {
+    const n = (navigator.language || "en").slice(0, 2).toLowerCase();
+    return T[n] ? n : "en";
+  }
+  let lang = localStorage.getItem(LANG_KEY) || detectLang();
+  function t(key, ...args) {
+    const v = (T[lang] && T[lang][key] !== undefined) ? T[lang][key] : T.en[key];
+    return typeof v === "function" ? v(...args) : v;
+  }
+  function loc() { return LOCALES[lang] || "en-US"; }
+  function monthShort(m) { return new Date(2000, m, 1).toLocaleDateString(loc(), { month: "short" }); }
+  function monthLong(y, m) { return new Date(y, m, 1).toLocaleDateString(loc(), { month: "long", year: "numeric" }); }
+
+  function applyStatic() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+    document.querySelectorAll("[data-i18n-aria]").forEach(el => { el.setAttribute("aria-label", t(el.dataset.i18nAria)); });
+    document.getElementById("privacyText").textContent = t("privacyText");
+    document.getElementById("langSelect").value = lang;
+  }
+
+  let items = load();
+  let view = "overview";
+  let typeFilter = "all";
+  let editingId = null;
+  let detailId = null;
+  let calMonth = null;
+  let pwEditing = false;
+
+  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } }
+  function persist() { try { localStorage.setItem(KEY, JSON.stringify(items)); } catch {} }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  const utcDay = (y, m, d) => Date.UTC(y, m, d) / 86400000;
+  const isLeap = y => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+
+  function nextOccurrence(item) {
+    const [yStr, mStr, dStr] = item.date.split("-");
+    const m = parseInt(mStr, 10) - 1;
+    const d = parseInt(dStr, 10);
+    const origYear = yStr ? parseInt(yStr, 10) : null;
+    const n = new Date();
+    const todayDay = utcDay(n.getFullYear(), n.getMonth(), n.getDate());
+    const candidate = y => {
+      const day = (m === 1 && d === 29 && !isLeap(y)) ? 28 : d;
+      return { y, day, serial: utcDay(y, m, day) };
+    };
+    let c = candidate(n.getFullYear());
+    if (c.serial < todayDay) c = candidate(c.y + 1);
+    return {
+      year: c.y, day: c.day, month: m,
+      days: c.serial - todayDay,
+      years: origYear ? c.y - origYear : null,
+    };
+  }
+  function countdownText(days) {
+    if (days === 0) return t("todayLbl");
+    if (days === 1) return t("tomorrow");
+    if (days <= 14) return t("inDays", days);
+    if (days < 60) return t("inWeeks", Math.round(days / 7));
+    return t("inMonths", Math.round(days / 30));
+  }
+  function ageText(it, occ) {
+    if (occ.years == null) return "";
+    return it.type === "birthday" ? t("turns", occ.years) : t("years", occ.years);
+  }
+  function fullDate(it) {
+    const [y, mo, d] = it.date.split("-");
+    const dt = new Date(y ? parseInt(y, 10) : 2000, parseInt(mo, 10) - 1, parseInt(d, 10));
+    return dt.toLocaleDateString(loc(), { month: "short", day: "numeric", year: y ? "numeric" : undefined });
+  }
+  function withOcc() { return items.map(it => ({ it, occ: nextOccurrence(it) })).sort((a, b) => a.occ.days - b.occ.days); }
+  function typeLabel(it) { return it.type === "birthday" ? t("birthday") : t("anniversary"); }
+
+  function entryHTML({ it, occ }) {
+    return `
+      <div class="swipe" data-id="${it.id}"><div class="swipe-actions"><button class="sw-edit" data-id="${it.id}">${t("editTitle")}</button><button class="sw-del" data-id="${it.id}">${t("delete")}</button></div>
+      <div class="entry ${occ.days === 0 ? "today" : ""}" data-id="${it.id}">
+        <div class="badge"><span class="m">${monthShort(occ.month)}</span><span class="d">${occ.day}</span></div>
+        <div class="body">
+          <div class="name">${esc(it.name)}</div>
+          <div class="meta">${it.rel ? esc(it.rel) + " · " : ""}${typeLabel(it)}${ageText(it, occ) ? " · " + ageText(it, occ) : ""}</div>
+        </div>
+        <div class="countdown">${countdownText(occ.days)}</div>
+      </div></div>`;
+  }
+  function emptyHTML(msg) { return `<div class="empty">${msg}</div>`; }
+  function setView(html) {
+    document.getElementById("view").innerHTML = html;
+    document.querySelectorAll(".tab").forEach(tb => tb.classList.toggle("active", tb.dataset.view === view));
+  }
+
+  function renderOverview() {
+    document.getElementById("pageTitle").textContent = t("overview");
+    const q = (window._q || "").toLowerCase();
+    const all = withOcc()
+      .filter(x => typeFilter === "all" || x.it.type === typeFilter)
+      .filter(x => !q || (x.it.name + " " + (x.it.rel || "") + " " + (x.it.notes || "")).toLowerCase().includes(q));
+    let html = `
+      <input class="search" id="search" type="search" placeholder="${t("searchPh")}" value="${esc(window._q || "")}">
+      <div class="chips">
+        ${["all","birthday","anniversary"].map(tp => `<button class="chip ${typeFilter === tp ? "active" : ""}" data-type="${tp}">${tp === "all" ? t("all") : tp === "birthday" ? t("birthdays") : t("anniversaries")}</button>`).join("")}
+      </div>`;
+    if (!items.length) html += emptyHTML(t("noDates"));
+    else if (!all.length) html += emptyHTML(t("nothingMatches"));
+    else html += all.map(entryHTML).join("");
+    setView(html);
+    const s = document.getElementById("search");
+    s.oninput = e => {
+      window._q = e.target.value;
+      renderOverview();
+      const ns = document.getElementById("search");
+      ns.focus(); ns.setSelectionRange(ns.value.length, ns.value.length);
+    };
+    document.querySelectorAll(".chip").forEach(c => c.onclick = () => { typeFilter = c.dataset.type; renderOverview(); });
+  }
+
+  function renderLive() {
+    document.getElementById("pageTitle").textContent = t("live");
+    const soon = withOcc().filter(x => x.occ.days <= 30);
+    let html = "";
+    if (soon.length) {
+      const first = soon[0];
+      html += `
+        <div class="hero">
+          <div class="label">${t("nextUp")}</div>
+          <div class="big">${esc(first.it.name)}</div>
+          <div class="sub">${countdownText(first.occ.days)} · ${fullDate(first.it)}${ageText(first.it, first.occ) ? " · " + ageText(first.it, first.occ) : ""}</div>
+        </div>
+        <div class="section">${t("next30")}</div>
+        ${soon.map(entryHTML).join("")}`;
+    } else if (items.length) {
+      html += emptyHTML(t("nothingIn30"));
+    } else {
+      html += emptyHTML(t("nothingHere"));
+    }
+    setView(html);
+  }
+
+  function renderCalendar() {
+    document.getElementById("pageTitle").textContent = t("calendar");
+    const now = new Date();
+    if (!calMonth) calMonth = { y: now.getFullYear(), m: now.getMonth() };
+    const { y, m } = calMonth;
+
+    const byDay = {};
+    items.forEach(it => {
+      const occ = nextOccurrence(it);
+      const mo = parseInt(it.date.split("-")[1], 10) - 1;
+      if (mo === m) (byDay[occ.day] ||= []).push(it);
+    });
+
+    const firstDow = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const isThisMonth = now.getFullYear() === y && now.getMonth() === m;
+
+    let cells = "";
+    for (let i = 0; i < firstDow; i++) cells += `<div class="cal-cell blank"></div>`;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const has = byDay[d] || [];
+      const today = isThisMonth && now.getDate() === d;
+      cells += `
+        <div class="cal-cell ${today ? "today" : ""}" data-day="${d}">
+          <span>${d}</span>
+          <div class="dots">${has.slice(0, 3).map(it => `<i class="dot ${it.type}"></i>`).join("")}</div>
+        </div>`;
+    }
+
+    const weekdays = [0,1,2,3,4,5,6].map(i => new Date(2024, 0, 7 + i).toLocaleDateString(loc(), { weekday: "narrow" }))
+      .map(w => `<span>${w}</span>`).join("");
+
+    setView(`
+      <div class="cal-head">
+        <button class="nav-btn" id="prevMonth" aria-label="‹">‹</button>
+        <div class="cal-title">${monthLong(y, m)}</div>
+        <button class="nav-btn" id="nextMonth" aria-label="›">›</button>
+      </div>
+      <div class="cal-week">${weekdays}</div>
+      <div class="cal-grid">${cells}</div>
+      <div class="legend"><span><i class="dot birthday"></i>${t("birthday")}</span><span><i class="dot anniversary"></i>${t("anniversary")}</span></div>
+      <div id="dayList"></div>`);
+
+    document.getElementById("prevMonth").onclick = () => {
+      calMonth = m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 };
+      renderCalendar();
+    };
+    document.getElementById("nextMonth").onclick = () => {
+      calMonth = m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 };
+      renderCalendar();
+    };
+    document.querySelectorAll(".cal-cell[data-day]").forEach(cell => cell.onclick = () => {
+      const d = parseInt(cell.dataset.day, 10);
+      const list = byDay[d] || [];
+      document.querySelectorAll(".cal-cell").forEach(c => c.classList.remove("selected"));
+      cell.classList.add("selected");
+      document.getElementById("dayList").innerHTML = list.length
+        ? `<div class="section">${monthShort(m)} ${d}</div>` + list.map(it => entryHTML({ it, occ: nextOccurrence(it) })).join("")
+        : `<div class="empty" style="padding:20px">${t("nothingOn", monthShort(m), d)}</div>`;
+    });
+  }
+
+  function render() {
+    if (view === "overview") renderOverview();
+    else if (view === "live") renderLive();
+    else renderCalendar();
+  }
+
+  function openEdit(id = null) {
+    editingId = id;
+    const it = id ? items.find(x => x.id === id) : null;
+    document.getElementById("editTitle").textContent = it ? t("editTitle") : t("addDate");
+    document.getElementById("fType").value = it?.type || (typeFilter === "anniversary" ? "anniversary" : "birthday");
+    document.getElementById("fName").value = it?.name || "";
+    document.getElementById("fRel").value = it?.rel || "";
+    document.getElementById("fDate").value = it?.date || "";
+    document.getElementById("fRemind").value = String(it?.remind ?? 3);
+    document.getElementById("fNotes").value = it?.notes || "";
+    const delBtn = document.getElementById("fDelete");
+    delBtn.style.display = it ? "" : "none";
+    delBtn.textContent = t("delete");
+    delete delBtn.dataset.armed;
+    openSheet("editSheet");
+  }
+  function saveEdit() {
+    const name = document.getElementById("fName").value.trim();
+    const date = document.getElementById("fDate").value;
+    if (!name) return toast(t("addName"));
+    if (!date) return toast(t("pickDate"));
+    const data = {
+      type: document.getElementById("fType").value,
+      name, date,
+      rel: document.getElementById("fRel").value.trim(),
+      remind: parseInt(document.getElementById("fRemind").value, 10),
+      notes: document.getElementById("fNotes").value.trim(),
+    };
+    if (editingId) Object.assign(items.find(x => x.id === editingId), data);
+    else items.push({ id: uid(), ...data });
+    persist(); closeAll(); render();
+    toast(t("saved"));
+    if (navigator.vibrate) navigator.vibrate(10);
+  }
+  function deleteItem(id) {
+    const btn = document.getElementById("fDelete");
+    if (btn.dataset.armed !== "1") {
+      btn.dataset.armed = "1";
+      btn.textContent = t("tapAgain");
+      return;
+    }
+    items = items.filter(x => x.id !== id);
+    persist(); closeAll(); render();
+  }
+
+  function wishFor(it, occ) {
+    if (it.type === "birthday") return t("wishBirthday", it.name);
+    return occ.years ? t("wishAnnivYears", it.name, occ.years) : t("wishAnniv", it.name);
+  }
+
+  function showDetail(id) {
+    detailId = id;
+    const it = items.find(x => x.id === id);
+    if (!it) return;
+    const occ = nextOccurrence(it);
+    const hasAge = occ.years != null;
+    const wish = wishFor(it, occ);
+    document.getElementById("detailBody").innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div>
+          <div class="meta">${it.rel ? esc(it.rel) + " · " : ""}${typeLabel(it)}</div>
+          <h2 style="margin:4px 0 0;font-size:24px">${esc(it.name)}</h2>
+        </div>
+        <button class="btn ghost" id="dEdit" style="padding:8px 14px">${t("editTitle")}</button>
+      </div>
+      <div class="detail-big">${fullDate(it)}</div>
+      <div class="meta">${countdownText(occ.days)}${hasAge ? " · " + ageText(it, occ) : ""}</div>
+      ${it.notes ? `<div class="msg">${esc(it.notes)}</div>` : ""}
+      <label>${t("messageIdea")}</label>
+      <div class="msg">${esc(wish)}</div>
+      <div class="row-btns"><button class="btn" id="copyWish">${t("copyMessage")}</button></div>
+      <div class="row-btns end"><button class="btn ghost" id="dClose">${t("close")}</button></div>`;
+    document.getElementById("dEdit").onclick = () => { closeAll(); openEdit(id); };
+    document.getElementById("dClose").onclick = closeAll;
+    document.getElementById("copyWish").onclick = () => copyText(wish);
+    openSheet("detailSheet");
+  }
+
+  function exportData() {
+    const blob = new Blob([JSON.stringify({ app: KEY, items }, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `dates-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  function importData(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        const incoming = Array.isArray(data) ? data : data.items;
+        if (!Array.isArray(incoming)) throw new Error();
+        const valid = incoming.filter(x => x && x.name && x.date && x.type);
+        const ids = new Set(items.map(x => x.id));
+        valid.forEach(x => { if (!ids.has(x.id)) items.push({ ...x, id: x.id || uid() }); });
+        persist(); closeAll(); render();
+        toast(t("imported", valid.length));
+      } catch { toast(t("fileBad")); }
+    };
+    reader.readAsText(file);
+  }
+
+  async function enableNotifications() {
+    if (!("Notification" in window)) return toast(t("notSupported"));
+    const res = await Notification.requestPermission();
+    toast(res === "granted" ? t("notifOn") : t("notifBlocked"));
+    if (res === "granted") checkNotifications();
+  }
+  function checkNotifications() {
+    if (localStorage.getItem(NOTIFY_OFF)) return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const seen = JSON.parse(localStorage.getItem(KEY + "-notified") || "{}");
+    items.forEach(it => {
+      const occ = nextOccurrence(it);
+      const tag = `${it.id}-${occ.year}`;
+      if (occ.days <= (it.remind ?? 3) && !seen[tag]) {
+        new Notification(occ.days === 0 ? t("notifToday", it.name) : t("notifIn", it.name, occ.days),
+          { body: it.type === "birthday" ? t("birthdayComing") : t("anniversaryComing") });
+        seen[tag] = true;
+      }
+    });
+    localStorage.setItem(KEY + "-notified", JSON.stringify(seen));
+  }
+
+  async function hashPw(s) {
+    if (window.crypto && crypto.subtle) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("dates:" + s));
+      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+    let h = 0;
+    for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) | 0;
+    return "fallback:" + h;
+  }
+  async function trySavePassword() {
+    const a = document.getElementById("pwNew").value;
+    const b = document.getElementById("pwConfirm").value;
+    if (a.length < 4 || a !== b) return;
+    localStorage.setItem(PW_KEY, await hashPw(a));
+    pwEditing = false;
+    document.getElementById("pwNew").value = "";
+    document.getElementById("pwConfirm").value = "";
+    refreshLockStatus();
+    toast(t("pwSaved"));
+  }
+  function togglePassword() {
+    const pwToggle = document.getElementById("pwToggle");
+    if (pwToggle.checked) {
+      pwEditing = true;
+      refreshLockStatus();
+      document.getElementById("pwNew").focus();
+    } else {
+      pwEditing = false;
+      if (localStorage.getItem(PW_KEY)) {
+        localStorage.removeItem(PW_KEY);
+        toast(t("pwOff"));
+      }
+      refreshLockStatus();
+    }
+  }
+
+  function bioSupported() {
+    return !!(window.isSecureContext && window.PublicKeyCredential && navigator.credentials);
+  }
+  async function enableBio() {
+    if (!bioSupported()) return toast(t("needHttps"));
+    try {
+      const cred = await navigator.credentials.create({
+        publicKey: {
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          rp: { name: "Dates" },
+          user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "me", displayName: "Me" },
+          pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+          authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred" },
+          timeout: 60000,
+        },
+      });
+      localStorage.setItem(BIO_KEY, JSON.stringify([...new Uint8Array(cred.rawId)]));
+      refreshLockStatus();
+      toast(t("fpEnabled"));
+    } catch (err) {
+      console.log("Fingerprint setup error:", err);
+      toast(err && err.name === "NotAllowedError"
+        ? t("cancelledBlocked")
+        : t("cantSetup", err?.name || t("unknownError")));
+    }
+  }
+  function disableBio() {
+    localStorage.removeItem(BIO_KEY);
+    refreshLockStatus();
+    toast(t("fpDisabled"));
+  }
+  async function bioUnlock() {
+    const ids = JSON.parse(localStorage.getItem(BIO_KEY) || "null");
+    if (!ids) return false;
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        allowCredentials: [{ type: "public-key", id: new Uint8Array(ids) }],
+        userVerification: "required",
+        timeout: 60000,
+      },
+    });
+    return !!assertion;
+  }
+
+  function refreshLockStatus() {
+    const hasPw = !!localStorage.getItem(PW_KEY);
+    const hasBio = !!localStorage.getItem(BIO_KEY);
+    const notifyOn = !localStorage.getItem(NOTIFY_OFF) && "Notification" in window && Notification.permission === "granted";
+
+    document.getElementById("pwToggle").checked = hasPw || pwEditing;
+    document.getElementById("pwFields").style.display = (!hasPw && pwEditing) ? "block" : "none";
+    document.getElementById("pwStatus").textContent = hasPw ? t("pwOnStatus") : t("off");
+
+    document.getElementById("bioToggle").checked = hasBio;
+    document.getElementById("bioStatus").textContent = hasBio ? t("fpOnStatus") : t("off");
+
+    document.getElementById("notifyToggle").checked = notifyOn;
+    document.getElementById("autoLock").value = localStorage.getItem(AL_KEY) ?? "5";
+  }
+
+  function showLock() {
+    return new Promise(resolve => {
+      const hasPw = !!localStorage.getItem(PW_KEY);
+      const hasBio = !!localStorage.getItem(BIO_KEY);
+      const lock = document.getElementById("lock");
+      const unlockBtn = document.getElementById("unlockBtn");
+      const pwArea = document.getElementById("pwArea");
+      const usePwBtn = document.getElementById("usePwBtn");
+      const input = document.getElementById("lockInput");
+      const msg = document.getElementById("lockMsg");
+
+      const finish = () => {
+        lock.classList.remove("show");
+        setTimeout(() => { lock.style.display = "none"; resolve(); }, 300);
+      };
+      const fail = text => {
+        msg.textContent = text;
+        lock.classList.remove("shake");
+        void lock.offsetWidth;
+        lock.classList.add("shake");
+      };
+      const showPw = () => {
+        pwArea.style.display = "block";
+        usePwBtn.style.display = "none";
+        setTimeout(() => input.focus(), 50);
+      };
+      const submitPw = async () => {
+        const ok = (await hashPw(input.value)) === localStorage.getItem(PW_KEY);
+        if (ok) { msg.textContent = ""; finish(); }
+        else { input.value = ""; fail(t("wrongPassword")); input.focus(); }
+      };
+      const tryBio = async () => {
+        msg.textContent = "";
+        try {
+          if (await bioUnlock()) return finish();
+        } catch {}
+        fail(t("couldntVerify"));
+        if (hasPw) showPw();
+      };
+
+      unlockBtn.onclick = () => {
+        if (hasBio) tryBio();
+        else showPw();
+      };
+      usePwBtn.style.display = hasPw && hasBio ? "" : "none";
+      usePwBtn.onclick = showPw;
+      document.getElementById("lockGo").onclick = submitPw;
+      input.onkeydown = e => { if (e.key === "Enter") submitPw(); };
+
+      pwArea.style.display = "none";
+      input.value = "";
+      msg.textContent = "";
+      lock.style.display = "flex";
+      requestAnimationFrame(() => lock.classList.add("show"));
+    });
+  }
+
+  function relock() {
+    const main = document.querySelector("main");
+    closeAll();
+    document.getElementById("aboutPage").classList.remove("open");
+    main.style.opacity = "0";
+    showLock().then(() => {
+      main.style.opacity = "";
+      main.classList.remove("pop");
+      void main.offsetWidth;
+      main.classList.add("pop");
+    });
+  }
+  let hiddenAt = 0;
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    const setting = localStorage.getItem(AL_KEY) ?? "5";
+    const locked = !!localStorage.getItem(PW_KEY) || !!localStorage.getItem(BIO_KEY);
+    if (!hiddenAt || !locked || setting === "never") return;
+    if (Date.now() - hiddenAt >= parseFloat(setting) * 60000) relock();
+    hiddenAt = 0;
+  });
+
+  function copyText(text) {
+    const done = () => toast(t("copied"));
+    const fallback = () => {
+      const ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch {}
+      ta.remove(); done();
+    };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, fallback);
+    else fallback();
+  }
+  let toastTimer;
+  function toast(msg) {
+    const el = document.getElementById("toast");
+    el.textContent = msg; el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+  }
+  function openSheet(id) {
+    document.getElementById("overlay").classList.add("open");
+    document.getElementById(id).classList.add("open");
+  }
+  function closeAll() {
+    document.getElementById("overlay").classList.remove("open");
+    document.querySelectorAll(".sheet").forEach(s => s.classList.remove("open"));
+    detailId = null;
+  }
+
+  function swipeDelete(btn) {
+    if (btn.dataset.armed !== "1") {
+      btn.dataset.armed = "1";
+      btn.textContent = t("tapAgain");
+      return;
+    }
+    const id = btn.dataset.id;
+    items = items.filter(x => x.id !== id);
+    persist(); render();
+    toast(t("deleted"));
+  }
+
+  let swStartX = 0, swLastDx = 0, swActive = null;
+  const viewEl = document.getElementById("view");
+  viewEl.addEventListener("touchstart", e => {
+    swActive = e.target.closest(".swipe");
+    swStartX = e.touches[0].clientX;
+    swLastDx = 0;
+  }, { passive: true });
+  viewEl.addEventListener("touchmove", e => {
+    if (!swActive) return;
+    swLastDx = e.touches[0].clientX - swStartX;
+    if (Math.abs(swLastDx) < 6) return;
+    const base = swActive.classList.contains("open") ? -150 : 0;
+    const x = Math.min(0, Math.max(-150, base + swLastDx));
+    const entry = swActive.querySelector(".entry");
+    entry.style.transition = "none";
+    entry.style.transform = `translateX(${x}px)`;
+  }, { passive: true });
+  viewEl.addEventListener("touchend", () => {
+    if (!swActive) return;
+    const entry = swActive.querySelector(".entry");
+    const base = swActive.classList.contains("open") ? -150 : 0;
+    const finalX = base + swLastDx;
+    entry.style.transition = "";
+    entry.style.transform = "";
+    if (Math.abs(swLastDx) > 6) {
+      document.querySelectorAll(".swipe.open").forEach(s => { if (s !== swActive) s.classList.remove("open"); });
+      swActive.classList.toggle("open", finalX < -75);
+    }
+    swActive = null;
+  });
+
+  function setLanguage(value) {
+    lang = value;
+    localStorage.setItem(LANG_KEY, value);
+    applyStatic();
+    render();
+    refreshLockStatus();
+    if (detailId) showDetail(detailId);
+  }
+
+  applyStatic();
+
+  document.getElementById("addBtn").onclick = () => openEdit();
+  document.getElementById("fSave").onclick = saveEdit;
+  document.getElementById("fCancel").onclick = closeAll;
+  document.getElementById("fDelete").onclick = () => deleteItem(editingId);
+  document.getElementById("overlay").onclick = closeAll;
+  document.getElementById("gearBtn").onclick = () => { refreshLockStatus(); openSheet("settingsSheet"); };
+  document.getElementById("closeSettings").onclick = closeAll;
+  document.getElementById("exportBtn").onclick = exportData;
+  document.getElementById("importBtn").onclick = () => document.getElementById("importFile").click();
+  document.getElementById("importFile").onchange = e => e.target.files[0] && importData(e.target.files[0]);
+  document.getElementById("notifyToggle").onchange = async e => {
+    if (e.target.checked) {
+      localStorage.removeItem(NOTIFY_OFF);
+      await enableNotifications();
+    } else {
+      localStorage.setItem(NOTIFY_OFF, "1");
+    }
+    refreshLockStatus();
+  };
+  document.getElementById("pwToggle").onchange = togglePassword;
+  document.getElementById("pwNew").oninput = trySavePassword;
+  document.getElementById("pwConfirm").oninput = trySavePassword;
+  document.getElementById("bioToggle").onchange = async e => {
+    if (e.target.checked) await enableBio();
+    else disableBio();
+    refreshLockStatus();
+  };
+  document.getElementById("autoLock").onchange = e => localStorage.setItem(AL_KEY, e.target.value);
+  document.getElementById("langSelect").onchange = e => setLanguage(e.target.value);
+
+  document.querySelectorAll(".tab").forEach(btn => btn.onclick = () => {
+    view = btn.dataset.view;
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  document.getElementById("view").onclick = e => {
+    const edit = e.target.closest(".sw-edit");
+    if (edit) return openEdit(edit.dataset.id);
+    const del = e.target.closest(".sw-del");
+    if (del) return swipeDelete(del);
+    const swipe = e.target.closest(".swipe");
+    if (swipe && swipe.classList.contains("open")) { swipe.classList.remove("open"); return; }
+    const row = e.target.closest(".entry");
+    if (row) showDetail(row.dataset.id);
+  };
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeAll();
+  });
+
+  document.getElementById("aboutBtn").onclick = () => {
+    closeAll();
+    document.getElementById("aboutPage").classList.add("open");
+  };
+  document.getElementById("aboutBack").onclick = () => {
+    document.getElementById("aboutPage").classList.remove("open");
+  };
+  document.getElementById("websiteBtn").onclick = () => {
+    window.open(window.location.href, "_blank", "noopener");
+  };
+  document.getElementById("privacyBtn").onclick = () => openSheet("privacySheet");
+  document.getElementById("privacyClose").onclick = closeAll;
+
+  async function startup() {
+    const main = document.querySelector("main");
+    const locked = !!localStorage.getItem(PW_KEY) || !!localStorage.getItem(BIO_KEY);
+    render();
+    if (locked) {
+      main.style.opacity = "0";
+      await showLock();
+      main.style.opacity = "";
+    }
+    main.classList.remove("pop");
+    void main.offsetWidth;
+    main.classList.add("pop");
+    checkNotifications();
+  }
+  startup();
+</script>
+</body>
+</html>
