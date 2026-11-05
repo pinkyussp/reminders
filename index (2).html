@@ -1,0 +1,2022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f1e8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Comfortaa:wght@400;500;600;700&family=Fredoka:wght@400;500;600;700&family=Varela+Round&family=Baloo+2:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Dates</title>
+<style>
+  :root {
+    --bg: #f7f1e8;
+    --card: #fffaf3;
+    --ink: #3a2e28;
+    --muted: #8c7b70;
+    --pink: #a84b44;
+    --lock-pink: #e8a598;
+    --maroon: #c2614f;
+    --line: #eadfd2;
+    --today: #f6e2d2;
+    --tabbar: #fffaf3;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  button, .entry, .cal-cell, .chip, .tab { outline: none; }
+  button:focus-visible, .cal-cell:focus-visible { outline: 2px solid var(--maroon); outline-offset: 2px; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; font-family: "Space Grotesk", -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased;
+  }
+  header { padding: 18px 16px 8px; display: flex; justify-content: space-between; align-items: center; max-width: 640px; margin: 0 auto; }
+  h1 { margin: 0; font-size: 24px; }
+  .add-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--maroon);
+    color: #fff; font-size: 24px; line-height: 1; cursor: pointer;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 4px 16px 130px; }
+  .search {
+    width: 100%; padding: 12px 14px; border-radius: 14px; border: none; background: var(--card);
+    color: var(--ink); font: inherit; font-size: 16px; margin-bottom: 12px; outline: none;
+  }
+  .chips { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; }
+  .chip {
+    padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent;
+    color: var(--muted); font: inherit; font-size: 14px; cursor: pointer; white-space: nowrap;
+  }
+  .chip.active { background: var(--maroon); color: #fff; border-color: var(--maroon); font-weight: 600; }
+  .hero { background: var(--maroon); border-radius: 24px; padding: 20px; margin-bottom: 14px; }
+  .hero .label { font-size: 13px; color: #fff9f4; }
+  .hero .big { font-size: 34px; font-weight: 700; margin: 4px 0; }
+  .hero .sub { font-size: 14px; color: #fff1ea; }
+  .section { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 20px 4px 8px; }
+  .entry {
+    background: var(--card); border-radius: 20px; padding: 14px; margin-bottom: 10px;
+    display: flex; gap: 14px; align-items: center; cursor: pointer;
+  }
+  .entry.today { background: var(--today); }
+  .badge {
+    flex: none; width: 54px; height: 54px; border-radius: 16px; background: var(--maroon);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;
+  }
+  .badge .m { font-size: 11px; text-transform: uppercase; color: #fff9f4; }
+  .badge .d { font-size: 20px; font-weight: 700; color: #fff; }
+  .body { flex: 1; min-width: 0; }
+  .name { font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .countdown { font-size: 14px; font-weight: 700; color: var(--pink); white-space: nowrap; }
+  .empty { text-align: center; color: var(--muted); padding: 60px 20px; line-height: 1.6; }
+
+  .tabbar {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+    width: min(92vw, 420px); background: var(--tabbar); border-radius: 999px;
+    display: flex; align-items: center; padding: 8px; gap: 4px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.15); z-index: 20;
+  }
+  .tab {
+    flex: 1; border: none; background: transparent; color: var(--ink); font: inherit; font-size: 16px;
+    font-weight: 600; padding: 13px 0; border-radius: 999px; cursor: pointer;
+  }
+  .tab.active { background: var(--maroon); color: #fff; }
+  .gear {
+    flex: none; width: 50px; height: 50px; border: none; background: transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; color: var(--ink); border-radius: 50%;
+  }
+  .gear svg { width: 26px; height: 26px; fill: var(--ink); }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; z-index: 30; }
+  .overlay.open { display: block; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; max-height: 92vh; overflow-y: auto;
+    background: var(--bg); border-radius: 26px 26px 0 0; padding: 20px 18px 30px;
+    transform: translateY(105%); transition: transform .28s ease; z-index: 31; max-width: 640px; margin: 0 auto;
+  }
+  .sheet.open { transform: translateY(0); }
+  .sheet::before {
+    content: ""; display: block; width: 40px; height: 5px; border-radius: 999px;
+    background: var(--line); margin: -8px auto 14px;
+  }
+  .sheet h2 { margin: 0 0 8px; font-size: 20px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+  input, select, textarea {
+    width: 100%; padding: 12px 14px; border: none; border-radius: 14px; background: var(--card);
+    color: var(--ink); font: inherit; font-size: 16px; outline: none;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .btn {
+    font: inherit; font-size: 15px; font-weight: 600; border: none; border-radius: 999px;
+    padding: 12px 20px; background: var(--maroon); color: #fff; cursor: pointer;
+  }
+  .btn.ghost { background: var(--card); color: var(--pink); }
+  .btn.danger { background: transparent; color: #b03a2e; }
+  .row-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+  .row-btns.end { justify-content: flex-end; }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+  .msg { background: var(--card); border-radius: 16px; padding: 14px; font-size: 15px; margin-top: 8px; white-space: pre-wrap; }
+  .detail-big { font-size: 22px; font-weight: 700; margin-top: 6px; }
+
+  .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+  .setting-row > div:first-child { flex: 1; min-width: 0; }
+  .switch { position: relative; display: inline-block; width: 52px; height: 31px; flex: none; }
+  .switch input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; padding: 0; }
+  .slider {
+    position: absolute; inset: 0; background: #d8cbbd; border-radius: 999px; cursor: pointer; transition: background .2s;
+  }
+  .slider::before {
+    content: ""; position: absolute; width: 27px; height: 27px; left: 2px; top: 2px;
+    background: #fff; border-radius: 50%; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+  .switch input:checked + .slider { background: var(--maroon); }
+  .switch input:checked + .slider::before { transform: translateX(21px); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%); background: var(--ink); color: var(--bg);
+    padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 600; opacity: 0;
+    transition: opacity .2s; pointer-events: none; z-index: 40;
+  }
+  .toast.show { opacity: 1; }
+
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 12px; }
+  .cal-title { font-size: 18px; font-weight: 700; }
+  .nav-btn {
+    width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--card);
+    color: var(--pink); font-size: 22px; cursor: pointer;
+  }
+  .cal-week, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-week span { text-align: center; font-size: 12px; color: var(--muted); padding: 4px 0; }
+  .cal-cell {
+    aspect-ratio: 1 / 1; border-radius: 12px; background: var(--card); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-size: 15px; cursor: pointer; gap: 3px;
+  }
+  .cal-cell.blank { background: transparent; cursor: default; }
+  .cal-cell.today { outline: 2px solid var(--pink); }
+  .cal-cell.selected { background: var(--maroon); }
+  .dots { display: flex; gap: 3px; height: 6px; }
+  .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--pink); }
+  .dot.anniversary { background: #5a7fb8; }
+  .legend { display: flex; gap: 16px; justify-content: center; font-size: 13px; color: var(--muted); margin-top: 14px; }
+  .legend .dot { margin-right: 6px; }
+
+  @keyframes pop {
+    from { opacity: 0; transform: scale(.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  main.pop { animation: pop .45s cubic-bezier(.2, .9, .3, 1.15) both; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  main.slide-r, main.slide-l { animation: fadeIn .2s ease both; }
+
+  #lock {
+    position: fixed; inset: 0; background: var(--bg); z-index: 99;
+    display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity .3s ease;
+  }
+  #lock.show { opacity: 1; }
+  #lock.shake .lock-box { animation: shake .4s; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); } 20% { transform: translateX(-10px); }
+    40% { transform: translateX(10px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(6px); }
+  }
+  .lock-box { width: min(86vw, 340px); text-align: center; }
+  .lock-icon { width: 60px; height: 60px; color: var(--maroon); display: block; margin: 0 auto; }
+  .lock-title { font-size: 26px; font-weight: 700; color: var(--ink); margin-top: 26px; }
+  .unlock-btn {
+    margin-top: 40px; width: min(70vw, 240px); padding: 18px 0; border: none; border-radius: 999px;
+    background: var(--maroon); color: #fff; font: inherit; font-size: 19px; font-weight: 600; cursor: pointer;
+  }
+  .pw-area { margin-top: 22px; }
+  .pw-area .lock-row { display: flex; gap: 8px; }
+  #lockInput {
+    flex: 1; background: var(--card); border: none; border-radius: 14px; color: var(--ink);
+    font: inherit; font-size: 17px; padding: 13px 14px; text-align: center; letter-spacing: 2px; outline: none;
+  }
+  #lockGo {
+    background: var(--maroon); color: #fff; border: none; border-radius: 999px; padding: 0 18px;
+    font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .link-btn {
+    margin-top: 18px; background: none; border: none; color: var(--pink); font: inherit; font-size: 14px;
+    cursor: pointer; text-decoration: underline;
+  }
+  #lockMsg { min-height: 20px; margin-top: 14px; font-size: 14px; color: #b03a2e; }
+
+  .sec-label { font-size: 12px; color: var(--pink); text-transform: uppercase; letter-spacing: .08em; margin: 22px 6px 8px; font-weight: 600; }
+  .card { background: var(--card); border-radius: 22px; overflow: hidden; }
+  .row {
+    display: flex; align-items: center; gap: 14px; padding: 15px 16px; border-bottom: 1px solid var(--line);
+    width: 100%;
+  }
+  .row:last-child { border-bottom: none; }
+  button.row { background: none; border: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .ico { width: 26px; height: 26px; flex: none; color: var(--muted); display: flex; align-items: center; justify-content: center; }
+  .ico svg { width: 24px; height: 24px; fill: currentColor; }
+  .rtext { flex: 1; min-width: 0; }
+  .rtitle { font-size: 16px; font-weight: 600; }
+  .rsub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .chev { color: var(--muted); font-size: 24px; line-height: 1; }
+  .row-extra { padding: 0 16px 16px; border-bottom: 1px solid var(--line); }
+  .row-extra input { margin-top: 0; }
+  .inline-select { width: auto !important; padding: 8px 10px !important; font-size: 14px !important; border-radius: 10px !important; }
+
+  .btn, .row, .entry, .chip, .nav-btn, .cal-cell { transition: transform .12s ease, background .2s ease; }
+  .btn:active, .nav-btn:active, .chip:active { transform: scale(.96); }
+  .entry:active, .row.action:active { transform: scale(.98); background: var(--today); }
+  .cal-cell:active { transform: scale(.94); }
+
+  .swipe { position: relative; overflow: hidden; border-radius: 20px; margin-bottom: 10px; }
+  .swipe .entry { margin-bottom: 0; position: relative; z-index: 1; transition: transform .25s ease; }
+  .swipe.open .entry { transform: translateX(-150px); }
+  .swipe-actions { position: absolute; right: 0; top: 0; bottom: 0; width: 150px; display: flex; }
+  .swipe-actions button {
+    flex: 1; border: none; color: #fff; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .sw-edit { background: #5a7fb8; }
+  .sw-del { background: #b03a2e; }
+
+  #aboutPage {
+    position: fixed; inset: 0; background: var(--bg); z-index: 35; overflow-y: auto; padding: 0 16px 40px;
+    transform: translateX(100%); transition: transform .3s ease;
+  }
+  #aboutPage.open { transform: translateX(0); }
+  .about-head { display: flex; align-items: center; gap: 10px; padding: 18px 0 14px; max-width: 640px; margin: 0 auto; }
+  .about-head h2 { margin: 0; font-size: 22px; }
+  .back-btn {
+    background: none; border: none; padding: 6px; cursor: pointer; color: var(--ink);
+    width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  }
+  .back-btn svg { width: 26px; height: 26px; fill: currentColor; }
+  #aboutPage .card { max-width: 640px; margin: 8px auto 0; }
+  #aboutPage .row .ico { color: var(--muted); }
+  .of { position: relative; border: 1.5px solid #b7a89b; border-radius: 16px; padding: 16px 16px 12px; margin-top: 18px; }
+  .of-label { position: absolute; top: -10px; left: 12px; background: var(--bg); padding: 0 6px; font-size: 13px; color: var(--muted); }
+  .of input, .of textarea { background: transparent; padding: 0; border-radius: 0; font-size: 17px; color: var(--ink); width: 100%; }
+  .of input::placeholder, .of textarea::placeholder { color: var(--muted); }
+  .of textarea { min-height: 60px; }
+  .plain-select { width: auto !important; background: transparent !important; padding: 0 !important; font-size: 16px !important; font-weight: 600; color: var(--ink) !important; border-radius: 0 !important; }
+  .date-row { display: flex; align-items: center; gap: 14px; margin-top: 26px; padding: 0 4px; }
+  .date-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .plain-date { width: auto !important; background: transparent !important; padding: 0 !important; font-size: 16px !important; font-weight: 600; color: var(--pink) !important; border-radius: 0 !important; }
+  .clear-x { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 6px; }
+  .edit-actions { display: flex; align-items: center; gap: 18px; margin-top: 30px; }
+  .spacer { flex: 1; }
+  .text-btn { background: none; border: none; font: inherit; font-size: 16px; font-weight: 600; color: var(--pink); cursor: pointer; padding: 8px; }
+  .text-btn.strong { font-weight: 700; }
+  .link-danger { background: none; border: none; font: inherit; font-size: 16px; font-weight: 600; color: var(--pink); cursor: pointer; padding: 8px 0; }
+  .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 8px 0 6px; }
+  .swatch-btn {
+    background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    font: inherit; font-size: 13px; color: var(--ink); cursor: pointer; padding: 0;
+  }
+  .swatch {
+    width: 68px; height: 68px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    border: 3px solid var(--line);
+  }
+  .swatch.sel { border-color: var(--maroon); }
+  .swatch-dot { width: 22px; height: 22px; border-radius: 50%; }
+  .font-sample { width: 42px; font-size: 22px; color: var(--ink); flex: none; }
+  .font-check { color: var(--maroon); font-weight: 700; font-size: 18px; }
+  .bg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+  .bg-tile {
+    height: 190px; border-radius: 22px; border: 3px solid transparent; cursor: pointer; padding: 0;
+    display: flex; align-items: flex-end; color: #fff; font: inherit; font-size: 16px; font-weight: 600; background-size: cover;
+  }
+  .bg-tile.sel { border-color: var(--lock-pink); }
+  .bg-tile span { padding: 14px 16px; text-shadow: 0 1px 4px rgba(0,0,0,.35); }
+  .radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--muted); flex: none; }
+  .radio.on { background: var(--maroon); border-color: var(--maroon); box-shadow: inset 0 0 0 4px var(--card); }
+  #bgLayer { position: fixed; inset: 0; z-index: -1; display: none; }
+  #bgLayer.on { display: block; }
+  #bgLayer::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.18); }
+  .fact { background: var(--card); border-radius: 24px; padding: 18px 20px; margin: 4px 0 14px; }
+  .fact-label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--pink); }
+  .fact-big { font-size: 30px; font-weight: 700; margin-top: 8px; word-break: break-word; }
+  .fact-sub { font-size: 15px; color: var(--muted); margin-top: 2px; }
+  .fact-dots { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  .fact-dot { width: 8px; height: 8px; border-radius: 50%; border: none; background: var(--line); padding: 0; cursor: pointer; }
+  .fact-dot.on { background: var(--pink); width: 12px; height: 12px; }
+  #privacySheet { z-index: 41; }
+  #privacySheet .msg { white-space: pre-line; line-height: 1.5; }
+  #modalBg { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; z-index: 49; }
+  #modalBg.open { display: block; }
+  .modal {
+    position: fixed; left: 50%; top: 50%; width: min(84vw, 320px); background: var(--card); border-radius: 24px;
+    padding: 28px 22px 22px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.25); z-index: 50;
+    opacity: 0; pointer-events: none; transform: translate(-50%, -50%) scale(.9); transition: opacity .2s ease, transform .25s ease;
+  }
+  .modal.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+  .modal .big-ico { font-size: 40px; }
+  .modal h3 { margin: 10px 0 6px; font-size: 22px; }
+  .modal p { margin: 0 0 18px; color: var(--muted); font-size: 15px; }
+</style>
+</head>
+<body>
+<div id="bgLayer"></div>
+
+<header>
+  <h1 id="pageTitle">Overview</h1>
+  <button class="add-btn" id="addBtn" data-i18n-aria="addDate" aria-label="Add a date">+</button>
+</header>
+
+<main class="pop">
+  <div id="view"></div>
+</main>
+
+<nav class="tabbar">
+  <button class="tab active" data-view="overview" data-i18n="overview">Overview</button>
+  <button class="tab" data-view="live" data-i18n="live">Live</button>
+  <button class="tab" data-view="calendar" data-i18n="calendar">Calendar</button>
+  <button class="gear" id="gearBtn" data-i18n-aria="settings" aria-label="Settings">
+    <svg viewBox="0 0 24 24"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3h-4l-.4 2.7a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1L11 21h4l.4-2.7a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+  </button>
+</nav>
+
+<div class="overlay" id="overlay"></div>
+
+<div class="sheet" id="editSheet">
+  <h2 id="editTitle">Add a date</h2>
+  <div class="of">
+    <span class="of-label" data-i18n="fieldName">Name</span>
+    <input id="fName" data-i18n-ph="namePh" placeholder="e.g. Maya">
+  </div>
+  <div class="of">
+    <span class="of-label" data-i18n="fieldRel">Relationship</span>
+    <input id="fRel" data-i18n-ph="relPh" placeholder="e.g. Sister, Coworker, Partner">
+  </div>
+  <div class="date-row">
+    <span class="ico"><svg viewBox="0 0 24 24"><path d="M20 7h-2.2A3 3 0 0 0 12 4.6 3 3 0 0 0 6.2 7H4a1 1 0 0 0-1 1v3h18V8a1 1 0 0 0-1-1zm-9 0a1 1 0 1 1-1-1 1 1 0 0 1 1 1zM4 13v7a1 1 0 0 0 1 1h6v-8zm10 8h6a1 1 0 0 0 1-1v-7h-7z"/></svg></span>
+    <div class="date-text">
+      <select id="fType" class="plain-select">
+        <option value="birthday" data-i18n="birthday">Birthday</option>
+        <option value="anniversary" data-i18n="anniversary">Anniversary</option>
+      </select>
+      <input id="fDate" type="date" class="plain-date">
+    </div>
+    <button class="clear-x" id="fClearDate" aria-label="Clear date">✕</button>
+  </div>
+  <div class="hint" data-i18n="dateHint">Add the year to see age or years together.</div>
+  <div class="of">
+    <span class="of-label" data-i18n="fieldRemind">Remind me</span>
+    <select id="fRemind" class="plain-select">
+      <option value="0" data-i18n="remind0">On the day</option>
+      <option value="1" data-i18n="remind1">1 day before</option>
+      <option value="3" selected data-i18n="remind3">3 days before</option>
+      <option value="7" data-i18n="remind7">1 week before</option>
+      <option value="14" data-i18n="remind14">2 weeks before</option>
+    </select>
+  </div>
+  <div class="of">
+    <span class="of-label" data-i18n="fieldNotes">Notes</span>
+    <textarea id="fNotes"></textarea>
+  </div>
+  <div class="hint" id="dupWarn" style="display:none;color:#b03a2e;font-weight:600"></div>
+  <div class="edit-actions">
+    <button class="link-danger" id="fDelete" style="display:none" data-i18n="delete">Delete</button>
+    <span class="spacer"></span>
+    <button class="text-btn" id="fCancel" data-i18n="cancel">Cancel</button>
+    <button class="text-btn strong" id="fSave" data-i18n="save">Save</button>
+  </div>
+</div>
+
+<div class="sheet" id="detailSheet"><div id="detailBody"></div></div>
+
+<div class="sheet" id="settingsSheet">
+  <div class="about-head" style="padding:0 0 10px">
+    <button class="back-btn" id="settingsBack" data-i18n-aria="back" aria-label="Back">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg>
+    </button>
+    <h2 data-i18n="settings">Settings</h2>
+  </div>
+
+  <div class="sec-label" data-i18n="general">General</div>
+  <div class="card">
+    <div class="row">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6V11a6 6 0 0 0-5-5.9V4a1 1 0 0 0-2 0v1.1A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="notifications">Notifications</div>
+        <div class="rsub" data-i18n="notificationsSub">Alerts when a date is coming up</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="notifyToggle"><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <div class="sec-label" data-i18n="security">Security</div>
+  <div class="card">
+    <div class="row">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="passwordLock">Password lock</div>
+        <div class="rsub" id="pwStatus" data-i18n="off">Off.</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="pwToggle"><span class="slider"></span></label>
+    </div>
+    <div id="pwFields" class="row-extra" style="display:none">
+      <input type="password" id="pwNew" data-i18n-ph="pwNewPh" placeholder="New password" autocomplete="new-password">
+      <input type="password" id="pwConfirm" data-i18n-ph="pwConfirmPh" placeholder="Confirm password" style="margin-top:8px" autocomplete="new-password">
+      <div class="hint" data-i18n="pwHint">Saves automatically once both match (at least 4 characters).</div>
+    </div>
+    <div class="row">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 11a1 1 0 0 1 1 1c0 3-.5 6-2 8h-1c1.3-2.5 2-5.5 2-8a1 1 0 0 1 1-1zm-4 1a4 4 0 0 1 8 0c0 2.5-.3 4.5-.9 6.5l-1-.3c.5-2 .9-4 .9-6.2a3 3 0 0 0-6 0c0 2-.2 4-.8 6l-1-.3c.6-2 .8-4 .8-5.7zM12 4a7 7 0 0 1 7 7c0 1.5-.2 3-.6 4.5l-1-.3c.4-1.4.6-2.8.6-4.2a6 6 0 0 0-12 0c0 1.4-.1 2.8-.4 4.2l-1 .3C4.2 14 4 12.5 4 11a8 8 0 0 1 8-7z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="fingerprint">Fingerprint or face</div>
+        <div class="rsub" id="bioStatus" data-i18n="off">Off.</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="bioToggle"><span class="slider"></span></label>
+    </div>
+    <div class="row">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5v5l3 2-1 1.7-4-2.4V7z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="autoLock">Auto-lock</div>
+        <div class="rsub" data-i18n="autoLockSub">Lock when the app goes to the background</div>
+      </div>
+      <select id="autoLock" class="inline-select">
+        <option value="0" data-i18n="autoImmediately">Immediately</option>
+        <option value="1" data-i18n="autoMin1">After 1 min</option>
+        <option value="5" data-i18n="autoMin5">After 5 min</option>
+        <option value="never" data-i18n="autoNever">Never</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="sec-label" data-i18n="people">People</div>
+  <div class="card">
+    <button class="row action" id="peopleBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M16 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm-8 0a3 3 0 1 0-3-3 3 3 0 0 0 3 3zm0 2c-2.3 0-7 1.2-7 3.5V19h14v-2.5C15 14.2 10.3 13 8 13zm8 0c-.3 0-.6 0-1 .1 1.2.9 2 2 2 3.4V19h6v-2.5c0-2.3-4.7-3.5-7-3.5z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="managePeople">Manage people</div>
+        <div class="rsub" id="peopleCount"></div>
+      </div>
+      <span class="chev">›</span>
+    </button>
+  </div>
+
+  <div class="sec-label" data-i18n="data">Data</div>
+  <div class="card">
+    <button class="row action" id="exportBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 3v11l4-4 1.4 1.4L12 18.8 6.6 11.4 8 10l4 4V3zM4 19h16v2H4z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="exportBackup">Export backup</div>
+        <div class="rsub" data-i18n="exportSub">Save all your dates to a file</div>
+      </div>
+      <span class="chev">›</span>
+    </button>
+    <button class="row action" id="importBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 21V10l-4 4-1.4-1.4L12 5.2l5.4 7.4L16 14l-4-4v11zM4 3h16v2H4z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="importBackup">Import backup</div>
+        <div class="rsub" data-i18n="importSub">Restore dates from a file</div>
+      </div>
+      <span class="chev">›</span>
+    </button>
+    <input type="file" id="importFile" accept="application/json" style="display:none">
+  </div>
+
+  <div class="sec-label" data-i18n="appearance">Appearance</div>
+  <div class="card">
+    <button class="row action" id="appearanceBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.7-.9 1.7-1.7 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5C21 6.6 17 3 12 3zM6.5 12a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="appearanceSub">Theme and font</div>
+      </div>
+      <span class="chev">›</span>
+    </button>
+  </div>
+
+  <div class="sec-label" data-i18n="info">Info</div>
+  <div class="card">
+    <div class="row">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 6h-3a15 15 0 0 0-1.3-3.6A8 8 0 0 1 18.9 8zM12 4c.8 1.2 1.5 2.5 1.9 4h-3.8c.4-1.5 1.1-2.8 1.9-4zM4.3 14a8 8 0 0 1 0-4h3.4a16 16 0 0 0 0 4H4.3zm.8 2h3a15 15 0 0 0 1.3 3.6A8 8 0 0 1 5.1 16zm3-8h-3a8 8 0 0 1 4.3-3.6A15 15 0 0 0 8.1 8zM12 20c-.8-1.2-1.5-2.5-1.9-4h3.8c-.4 1.5-1.1 2.8-1.9 4zm2.3-6H9.7a14 14 0 0 1 0-4h4.6a14 14 0 0 1 0 4zm.3 5.6c.6-1.1 1.1-2.3 1.3-3.6h3a8 8 0 0 1-4.3 3.6zm1.7-5.6a16 16 0 0 0 0-4h3.4a8 8 0 0 1 0 4h-3.4z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="language">Language</div>
+        <div class="rsub" data-i18n="languageSub">Choose the app's language</div>
+      </div>
+      <select id="langSelect" class="inline-select">
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="es">Español</option>
+      </select>
+    </div>
+    <button class="row action" id="aboutBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="aboutApp">About the app</div>
+        <div class="rsub" data-i18n="aboutSub">Website, privacy policy and version</div>
+      </div>
+      <span class="chev">›</span>
+    </button>
+  </div>
+
+  <div class="row-btns end">
+    <button class="btn ghost" id="closeSettings" data-i18n="done">Done</button>
+  </div>
+</div>
+
+<div class="sheet" id="peopleSheet">
+  <div class="about-head" style="padding:0 0 10px">
+    <button class="back-btn" id="peopleBack" data-i18n-aria="back" aria-label="Back">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg>
+    </button>
+    <h2 id="peopleTitle" data-i18n="managePeople">Manage people</h2>
+  </div>
+  <div class="row-btns" id="addPersonRow">
+    <button class="btn" id="addPersonBtn">+ <span data-i18n="addPerson">Add person</span></button>
+  </div>
+  <div class="hint" id="addPersonHint" data-i18n="personHint">A person shows up here once they have a date.</div>
+  <div id="peopleBody"></div>
+</div>
+
+<div class="sheet" id="appearanceSheet">
+  <div class="about-head" style="padding:0 0 10px">
+    <button class="back-btn" id="appBack" data-i18n-aria="back" aria-label="Back">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg>
+    </button>
+    <h2 data-i18n="appearance">Appearance</h2>
+  </div>
+  <div class="card">
+    <button class="row action" id="photoBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M19 7V4h-2v3h-3v2h3v3h2V9h3V7h-3zM5 21h14a2 2 0 0 0 2-2v-8h-2v8H5V5h8V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2z"/></svg></span>
+      <div class="rtext"><div class="rtitle" data-i18n="photoRow">Choose your own photo</div></div>
+      <span class="chev">›</span>
+    </button>
+    <button class="row action" id="bgBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M4 6H2v14a2 2 0 0 0 2 2h14v-2H4zm16-4H8a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm-7 12 3-4 2 2.5 2.5-3.5 3.5 5H10z"/></svg></span>
+      <div class="rtext"><div class="rtitle" data-i18n="bgRow">Choose a background</div></div>
+      <span class="chev">›</span>
+    </button>
+    <div class="row">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm4 4v10l8-5z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="slideTitle">Slideshow</div>
+        <div class="rsub" id="slideSub"></div>
+      </div>
+      <label class="switch"><input type="checkbox" id="slideToggle"><span class="slider"></span></label>
+    </div>
+    <button class="row action" id="resetBgBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z"/></svg></span>
+      <div class="rtext"><div class="rtitle" data-i18n="resetRow">Reset photo</div></div>
+    </button>
+    <button class="row action" id="themeBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.7-.9 1.7-1.7 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5C21 6.6 17 3 12 3zM6.5 12a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg></span>
+      <div class="rtext"><div class="rtitle" data-i18n="themeTitle">Theme</div></div>
+      <span class="chev">›</span>
+    </button>
+    <button class="row action" id="fontBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M3 4h11v3h-4v12H7V7H3zm13 6h5v2h-2v6h-2v-6h-1z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="fontTitle">Font</div>
+        <div class="rsub" id="fontCurrent"></div>
+      </div>
+      <span class="chev">›</span>
+    </button>
+  </div>
+  <input type="file" id="photoFile" accept="image/*" style="display:none">
+</div>
+
+<div class="sheet" id="backgroundSheet">
+  <div class="about-head" style="padding:0 0 10px">
+    <button class="back-btn" id="bgBack" data-i18n-aria="back" aria-label="Back">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg>
+    </button>
+    <h2 data-i18n="bgTitle">Backgrounds</h2>
+  </div>
+  <div class="bg-grid" id="bgGrid"></div>
+</div>
+
+<div class="sheet" id="themeSheet">
+  <div class="about-head" style="padding:0 0 10px">
+    <button class="back-btn" id="themeBack" data-i18n-aria="back" aria-label="Back">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg>
+    </button>
+    <h2 data-i18n="themeTitle">Theme</h2>
+  </div>
+  <div class="theme-grid" id="themeGrid"></div>
+</div>
+
+<div class="sheet" id="fontSheet">
+  <div class="about-head" style="padding:0 0 10px">
+    <button class="back-btn" id="fontBack" data-i18n-aria="back" aria-label="Back">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg>
+    </button>
+    <h2 data-i18n="fontTitle">Font</h2>
+  </div>
+  <div id="fontList"></div>
+</div>
+
+<div id="lock">
+  <div class="lock-box">
+    <svg class="lock-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8 10V7.5a4 4 0 0 1 8 0V10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+      <rect x="5" y="10" width="14" height="11" rx="2.5" fill="currentColor"/>
+      <circle cx="12" cy="15.5" r="1.7" fill="#f7f1e8"/>
+    </svg>
+    <div class="lock-title" data-i18n="lockTitle">Dates is locked</div>
+    <button class="unlock-btn" id="unlockBtn" data-i18n="unlock">Unlock</button>
+    <div class="pw-area" id="pwArea" style="display:none">
+      <div class="lock-row">
+        <input id="lockInput" type="password" data-i18n-ph="passwordPh" placeholder="Password" autocomplete="current-password">
+        <button id="lockGo" data-i18n="enter">Enter</button>
+      </div>
+    </div>
+    <button class="link-btn" id="usePwBtn" style="display:none" data-i18n="usePassword">Use password instead</button>
+    <div id="lockMsg"></div>
+  </div>
+</div>
+
+<div id="aboutPage">
+  <div class="about-head">
+    <button class="back-btn" id="aboutBack" data-i18n-aria="back" aria-label="Back">
+      <svg viewBox="0 0 24 24"><path d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20z"/></svg>
+    </button>
+    <h2 data-i18n="aboutApp">About the app</h2>
+  </div>
+  <div class="card">
+    <button class="row action" id="websiteBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.9 6h-3a15 15 0 0 0-1.3-3.6A8 8 0 0 1 18.9 8zM12 4c.8 1.2 1.5 2.5 1.9 4h-3.8c.4-1.5 1.1-2.8 1.9-4zM4.3 14a8 8 0 0 1 0-4h3.4a16 16 0 0 0 0 4H4.3zm.8 2h3a15 15 0 0 0 1.3 3.6A8 8 0 0 1 5.1 16zm3-8h-3a8 8 0 0 1 4.3-3.6A15 15 0 0 0 8.1 8zM12 20c-.8-1.2-1.5-2.5-1.9-4h3.8c-.4 1.5-1.1 2.8-1.9 4zm2.3-6H9.7a14 14 0 0 1 0-4h4.6a14 14 0 0 1 0 4zm.3 5.6c.6-1.1 1.1-2.3 1.3-3.6h3a8 8 0 0 1-4.3 3.6zm1.7-5.6a16 16 0 0 0 0-4h3.4a8 8 0 0 1 0 4h-3.4z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="website">Website</div>
+        <div class="rsub" data-i18n="websiteSub">Open this app's page</div>
+      </div>
+      <span class="chev">›</span>
+    </button>
+    <button class="row action" id="privacyBtn">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="privacyPolicy">Privacy policy</div>
+        <div class="rsub" data-i18n="privacySub">How your data is handled</div>
+      </div>
+      <span class="chev">›</span>
+    </button>
+    <div class="row">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-6h2zm0-8h-2V7h2z"/></svg></span>
+      <div class="rtext">
+        <div class="rtitle" data-i18n="version">Version</div>
+        <div class="rsub" style="color:var(--pink)">1.0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="privacySheet">
+  <h2 data-i18n="privacyPolicy">Privacy policy</h2>
+  <div class="msg" id="privacyText"></div>
+  <div class="row-btns end">
+    <button class="btn ghost" id="privacyClose" data-i18n="done">Done</button>
+  </div>
+</div>
+
+<div id="modalBg"></div>
+<div class="modal" id="comingModal" role="dialog" aria-modal="true">
+  <div class="big-ico">🚀</div>
+  <h3 id="comingTitle"></h3>
+  <p id="comingText"></p>
+  <button class="btn" id="comingOk">OK</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const KEY = "bday-reminder-v1";
+  const PW_KEY = "bday-reminder-pw";
+  const BIO_KEY = "bday-reminder-bio";
+  const NOTIFY_OFF = "bday-reminder-notify-off";
+  const AL_KEY = "bday-reminder-autolock";
+  const LANG_KEY = "bday-reminder-lang";
+
+  const LOCALES = { en: "en-US", fr: "fr-CA", es: "es-ES" };
+
+  const T = {
+    en: {
+      overview: "Overview", live: "Live", calendar: "Calendar",
+      addDate: "Add a date", editTitle: "Edit", back: "Back",
+      type: "Type", birthday: "Birthday", anniversary: "Anniversary",
+      nameLabel: 'Name (or couple, e.g. "Sam & Jo")', namePh: "e.g. Maya",
+      relLabel: "Relationship", relPh: "e.g. Sister, Coworker, Partner",
+      dateLabel: "Date", dateHint: "Add the year to see age or years together.",
+      remindLabel: "Remind me", remind0: "On the day", remind1: "1 day before", remind3: "3 days before",
+      remind7: "1 week before", remind14: "2 weeks before",
+      notesLabel: "Notes (gift ideas, plans)",
+      delete: "Delete", tapAgain: "Tap again to delete", cancel: "Cancel", save: "Save",
+      settings: "Settings", reminders: "Reminders", security: "Security", data: "Data", info: "Info",
+      notifications: "Notifications", notificationsSub: "Alerts when a date is coming up",
+      passwordLock: "Password lock", off: "Off.", pwOnStatus: "On. The app asks for it when it opens.",
+      pwNewPh: "New password", pwConfirmPh: "Confirm password",
+      pwHint: "Saves automatically once both match (at least 4 characters).",
+      fingerprint: "Fingerprint or face", fpOnStatus: "On. Unlock with your fingerprint or face.",
+      autoLock: "Auto-lock", autoLockSub: "Lock when the app goes to the background",
+      autoImmediately: "Immediately", autoMin1: "After 1 min", autoMin5: "After 5 min", autoNever: "Never",
+      exportBackup: "Export backup", exportSub: "Save all your dates to a file",
+      importBackup: "Import backup", importSub: "Restore dates from a file",
+      language: "Language", languageSub: "Choose the app's language",
+      aboutApp: "About the app", aboutSub: "Website, privacy policy and version",
+      website: "Website", websiteSub: "Open this app's page",
+      privacyPolicy: "Privacy policy", privacySub: "How your data is handled", version: "Version",
+      privacyText: "Dates has no accounts and no servers. Everything you enter, including names, dates, and notes, is stored only in this browser on this device. Nothing is sent anywhere.\n\nYour password is stored on this device as a scrambled version, not as plain text. Fingerprint or face unlock is handled by your device. The app only learns whether it passed.\n\nIf you clear your browser data, your dates and settings are removed. Export a backup file first if you want a copy.",
+      done: "Done",
+      lockTitle: "Dates is locked", unlock: "Unlock", usePassword: "Use password instead",
+      passwordPh: "Password", enter: "Enter", wrongPassword: "Wrong password", couldntVerify: "Couldn't verify.",
+      messageIdea: "Message idea", copyMessage: "Copy message", copied: "Copied", close: "Close",
+      nextUp: "Next up", next30: "Next 30 days", nothingIn30: "Nothing in the next 30 days.",
+      noDates: "No dates yet.<br>Tap + to add a birthday or anniversary.", nothingMatches: "Nothing matches that.",
+      nothingHere: "Nothing here yet. Add a date and it will show up here when it's close.",
+      searchPh: "Search names or notes", all: "All", birthdays: "Birthdays", anniversaries: "Anniversaries",
+      addName: "Add a name", pickDate: "Pick a date", saved: "Saved", deleted: "Deleted",
+      notSupported: "Not supported here", notifOn: "Notifications on", notifBlocked: "Notifications blocked",
+      needHttps: "Open the app over https to use this", cancelledBlocked: "Cancelled, or this device blocked it",
+      cantSetup: n => `Can't set up here: ${n}`, unknownError: "unknown error",
+      fpEnabled: "Fingerprint or face on", fpDisabled: "Fingerprint or face off",
+      pwSaved: "Password saved", pwOff: "Password lock off", pwMin: "Use at least 4 characters",
+      imported: n => `Imported ${n} dates`, fileBad: "That file didn't work",
+      nothingOn: (m, d) => `Nothing on ${m} ${d}.`,
+      todayLbl: "Today", tomorrow: "Tomorrow",
+      inDays: n => `In ${n} days`, inWeeks: n => `In ${n} weeks`, inMonths: n => `In ${n} months`,
+      turns: n => `turns ${n}`, years: n => `${n} yr${n === 1 ? "" : "s"}`,
+      wishBirthday: name => `Happy birthday, ${name}! 🎉`,
+      wishAnnivYears: (name, n) => `Happy ${n}-year anniversary, ${name}! 💛`,
+      wishAnniv: name => `Happy anniversary, ${name}! 💛`,
+      notifToday: name => `Today: ${name}`,
+      notifIn: (name, n) => `${name} in ${n} day${n === 1 ? "" : "s"}`,
+      birthdayComing: "Birthday coming up", anniversaryComing: "Anniversary coming up",
+      dateCount: n => `${n} dates`
+    },
+    fr: {
+      overview: "Aperçu", live: "En direct", calendar: "Calendrier",
+      addDate: "Ajouter une date", editTitle: "Modifier", back: "Retour",
+      type: "Type", birthday: "Anniversaire", anniversary: "Anniversaire de couple",
+      nameLabel: 'Nom (ou couple, ex. « Sam et Jo »)', namePh: "ex. Maya",
+      relLabel: "Lien", relPh: "ex. Sœur, Collègue, Partenaire",
+      dateLabel: "Date", dateHint: "Ajoutez l'année pour voir l'âge ou les années ensemble.",
+      remindLabel: "Rappel", remind0: "Le jour même", remind1: "1 jour avant", remind3: "3 jours avant",
+      remind7: "1 semaine avant", remind14: "2 semaines avant",
+      notesLabel: "Notes (idées de cadeaux, projets)",
+      delete: "Supprimer", tapAgain: "Appuyez encore pour supprimer", cancel: "Annuler", save: "Enregistrer",
+      settings: "Réglages", reminders: "Rappels", security: "Sécurité", data: "Données", info: "Infos",
+      notifications: "Notifications", notificationsSub: "Alertes quand une date approche",
+      passwordLock: "Verrou par mot de passe", off: "Désactivé.", pwOnStatus: "Activé. L'app le demande à l'ouverture.",
+      pwNewPh: "Nouveau mot de passe", pwConfirmPh: "Confirmer le mot de passe",
+      pwHint: "Enregistré automatiquement une fois les deux identiques (au moins 4 caractères).",
+      fingerprint: "Empreinte ou visage", fpOnStatus: "Activé. Déverrouillez avec votre empreinte ou votre visage.",
+      autoLock: "Verrouillage auto", autoLockSub: "Verrouiller quand l'app passe en arrière-plan",
+      autoImmediately: "Immédiatement", autoMin1: "Après 1 min", autoMin5: "Après 5 min", autoNever: "Jamais",
+      exportBackup: "Exporter une sauvegarde", exportSub: "Enregistrer toutes vos dates dans un fichier",
+      importBackup: "Importer une sauvegarde", importSub: "Restaurer les dates depuis un fichier",
+      language: "Langue", languageSub: "Choisissez la langue de l'app",
+      aboutApp: "À propos", aboutSub: "Site web, confidentialité et version",
+      website: "Site web", websiteSub: "Ouvrir la page de cette app",
+      privacyPolicy: "Confidentialité", privacySub: "Comment vos données sont traitées", version: "Version",
+      privacyText: "Dates n'a ni compte ni serveur. Tout ce que vous saisissez, y compris les noms, dates et notes, est stocké uniquement dans ce navigateur sur cet appareil. Rien n'est envoyé ailleurs.\n\nVotre mot de passe est stocké sur cet appareil sous une forme brouillée, jamais en clair. Le déverrouillage par empreinte ou visage est géré par votre appareil. L'app sait seulement si la vérification a réussi.\n\nSi vous effacez les données de votre navigateur, vos dates et réglages seront supprimés. Exportez une sauvegarde avant si vous voulez une copie.",
+      done: "Terminé",
+      lockTitle: "Dates est verrouillé", unlock: "Déverrouiller", usePassword: "Utiliser le mot de passe",
+      passwordPh: "Mot de passe", enter: "Entrer", wrongPassword: "Mot de passe incorrect", couldntVerify: "Vérification impossible.",
+      messageIdea: "Idée de message", copyMessage: "Copier le message", copied: "Copié", close: "Fermer",
+      nextUp: "Prochain", next30: "Dans les 30 prochains jours", nothingIn30: "Rien dans les 30 prochains jours.",
+      noDates: "Aucune date pour l'instant.<br>Appuyez sur + pour ajouter un anniversaire.", nothingMatches: "Aucun résultat.",
+      nothingHere: "Rien pour l'instant. Ajoutez une date et elle apparaîtra ici à l'approche.",
+      searchPh: "Chercher un nom ou une note", all: "Tous", birthdays: "Anniversaires", anniversaries: "Anniversaires de couple",
+      addName: "Ajoutez un nom", pickDate: "Choisissez une date", saved: "Enregistré", deleted: "Supprimé",
+      notSupported: "Non compatible ici", notifOn: "Notifications activées", notifBlocked: "Notifications bloquées",
+      needHttps: "Ouvrez l'app en https pour utiliser ceci", cancelledBlocked: "Annulé, ou bloqué par l'appareil",
+      cantSetup: n => `Configuration impossible ici : ${n}`, unknownError: "erreur inconnue",
+      fpEnabled: "Empreinte ou visage activé", fpDisabled: "Empreinte ou visage désactivé",
+      pwSaved: "Mot de passe enregistré", pwOff: "Verrou désactivé", pwMin: "Au moins 4 caractères",
+      imported: n => `${n} dates importées`, fileBad: "Ce fichier ne fonctionne pas",
+      nothingOn: (m, d) => `Rien le ${d} ${m}.`,
+      todayLbl: "Aujourd'hui", tomorrow: "Demain",
+      inDays: n => `Dans ${n} jours`, inWeeks: n => `Dans ${n} semaines`, inMonths: n => `Dans ${n} mois`,
+      turns: n => `${n} ans`, years: n => `${n} an${n === 1 ? "" : "s"}`,
+      wishBirthday: name => `Joyeux anniversaire, ${name} ! 🎉`,
+      wishAnnivYears: (name, n) => `Bon ${n} ans, ${name} ! 💛`,
+      wishAnniv: name => `Joyeux anniversaire de couple, ${name} ! 💛`,
+      notifToday: name => `Aujourd'hui : ${name}`,
+      notifIn: (name, n) => `${name} dans ${n} jour${n === 1 ? "" : "s"}`,
+      birthdayComing: "Anniversaire qui approche", anniversaryComing: "Anniversaire de couple qui approche",
+      dateCount: n => `${n} dates`
+    },
+    es: {
+      overview: "Resumen", live: "En vivo", calendar: "Calendario",
+      addDate: "Añadir una fecha", editTitle: "Editar", back: "Volver",
+      type: "Tipo", birthday: "Cumpleaños", anniversary: "Aniversario",
+      nameLabel: 'Nombre (o pareja, p. ej. "Sam y Jo")', namePh: "p. ej. Maya",
+      relLabel: "Relación", relPh: "p. ej. Hermana, Compañera, Pareja",
+      dateLabel: "Fecha", dateHint: "Añade el año para ver la edad o los años juntos.",
+      remindLabel: "Recordar", remind0: "El mismo día", remind1: "1 día antes", remind3: "3 días antes",
+      remind7: "1 semana antes", remind14: "2 semanas antes",
+      notesLabel: "Notas (ideas de regalo, planes)",
+      delete: "Eliminar", tapAgain: "Toca otra vez para eliminar", cancel: "Cancelar", save: "Guardar",
+      settings: "Ajustes", reminders: "Recordatorios", security: "Seguridad", data: "Datos", info: "Información",
+      notifications: "Notificaciones", notificationsSub: "Avisos cuando una fecha se acerca",
+      passwordLock: "Bloqueo con contraseña", off: "Desactivado.", pwOnStatus: "Activado. La app la pide al abrirse.",
+      pwNewPh: "Nueva contraseña", pwConfirmPh: "Confirmar contraseña",
+      pwHint: "Se guarda automáticamente cuando ambas coinciden (mínimo 4 caracteres).",
+      fingerprint: "Huella o rostro", fpOnStatus: "Activado. Desbloquea con tu huella o tu rostro.",
+      autoLock: "Bloqueo automático", autoLockSub: "Bloquear cuando la app pasa a segundo plano",
+      autoImmediately: "Inmediatamente", autoMin1: "Tras 1 min", autoMin5: "Tras 5 min", autoNever: "Nunca",
+      exportBackup: "Exportar copia", exportSub: "Guardar todas tus fechas en un archivo",
+      importBackup: "Importar copia", importSub: "Restaurar fechas desde un archivo",
+      language: "Idioma", languageSub: "Elige el idioma de la app",
+      aboutApp: "Acerca de la app", aboutSub: "Sitio web, privacidad y versión",
+      website: "Sitio web", websiteSub: "Abrir la página de esta app",
+      privacyPolicy: "Política de privacidad", privacySub: "Cómo se manejan tus datos", version: "Versión",
+      privacyText: "Dates no tiene cuentas ni servidores. Todo lo que escribes, incluidos nombres, fechas y notas, se guarda solo en este navegador de este dispositivo. No se envía nada a ningún sitio.\n\nTu contraseña se guarda en este dispositivo de forma cifrada, no en texto plano. El desbloqueo con huella o rostro lo gestiona tu dispositivo. La app solo sabe si la verificación fue correcta.\n\nSi borras los datos del navegador, tus fechas y ajustes se eliminarán. Exporta una copia antes si quieres conservarla.",
+      done: "Listo",
+      lockTitle: "Dates está bloqueado", unlock: "Desbloquear", usePassword: "Usar contraseña",
+      passwordPh: "Contraseña", enter: "Entrar", wrongPassword: "Contraseña incorrecta", couldntVerify: "No se pudo verificar.",
+      messageIdea: "Idea de mensaje", copyMessage: "Copiar mensaje", copied: "Copiado", close: "Cerrar",
+      nextUp: "Próximo", next30: "Próximos 30 días", nothingIn30: "Nada en los próximos 30 días.",
+      noDates: "Aún no hay fechas.<br>Toca + para añadir un cumpleaños o aniversario.", nothingMatches: "No hay coincidencias.",
+      nothingHere: "Aún no hay nada. Añade una fecha y aparecerá aquí cuando se acerque.",
+      searchPh: "Buscar nombres o notas", all: "Todos", birthdays: "Cumpleaños", anniversaries: "Aniversarios",
+      addName: "Añade un nombre", pickDate: "Elige una fecha", saved: "Guardado", deleted: "Eliminado",
+      notSupported: "No compatible aquí", notifOn: "Notificaciones activadas", notifBlocked: "Notificaciones bloqueadas",
+      needHttps: "Abre la app por https para usar esto", cancelledBlocked: "Cancelado, o el dispositivo lo bloqueó",
+      cantSetup: n => `No se puede configurar aquí: ${n}`, unknownError: "error desconocido",
+      fpEnabled: "Huella o rostro activado", fpDisabled: "Huella o rostro desactivado",
+      pwSaved: "Contraseña guardada", pwOff: "Bloqueo desactivado", pwMin: "Usa al menos 4 caracteres",
+      imported: n => `${n} fechas importadas`, fileBad: "Ese archivo no funcionó",
+      nothingOn: (m, d) => `Nada el ${d} de ${m}.`,
+      todayLbl: "Hoy", tomorrow: "Mañana",
+      inDays: n => `En ${n} días`, inWeeks: n => `En ${n} semanas`, inMonths: n => `En ${n} meses`,
+      turns: n => `cumple ${n}`, years: n => `${n} año${n === 1 ? "" : "s"}`,
+      wishBirthday: name => `¡Feliz cumpleaños, ${name}! 🎉`,
+      wishAnnivYears: (name, n) => `¡Felices ${n} años juntos, ${name}! 💛`,
+      wishAnniv: name => `¡Feliz aniversario, ${name}! 💛`,
+      notifToday: name => `Hoy: ${name}`,
+      notifIn: (name, n) => `${name} en ${n} día${n === 1 ? "" : "s"}`,
+      birthdayComing: "Cumpleaños próximo", anniversaryComing: "Aniversario próximo",
+      dateCount: n => `${n} fechas`
+    }
+  };
+
+  const X = {
+    en: { managePeople: "Manage people", people: "People", peopleCount: n => `${n} people` },
+    fr: { managePeople: "Gérer les personnes", people: "Personnes", peopleCount: n => `${n} personne${n === 1 ? "" : "s"}` },
+    es: { managePeople: "Gestionar personas", people: "Personas", peopleCount: n => `${n} persona${n === 1 ? "" : "s"}` }
+  };
+
+  const XF = {
+    en: { fieldName: "Name", fieldRel: "Relationship", fieldRemind: "Remind me", fieldNotes: "Notes", editDate: "Edit date" },
+    fr: { fieldName: "Nom", fieldRel: "Lien", fieldRemind: "Rappel", fieldNotes: "Notes", editDate: "Modifier la date" },
+    es: { fieldName: "Nombre", fieldRel: "Relación", fieldRemind: "Recordatorio", fieldNotes: "Notas", editDate: "Editar fecha" }
+  };
+  for (const l in XF) Object.assign(X[l], XF[l]);
+
+  const XG = {
+    en: { appearance: "Appearance", appearanceSub: "Theme and font", themeTitle: "Theme", fontTitle: "Font", th_cream: "Cream", th_wine: "Wine", th_midnight: "Midnight", th_forest: "Forest", th_lavender: "Lavender", th_noir: "Noir", ft_space: "Space Grotesk", ft_inter: "Inter", ft_playfair: "Playfair Display", ft_nunito: "Nunito" },
+    fr: { appearance: "Apparence", appearanceSub: "Thème et police", themeTitle: "Thème", fontTitle: "Police", th_cream: "Crème", th_wine: "Vin", th_midnight: "Minuit", th_forest: "Forêt", th_lavender: "Lavande", th_noir: "Noir", ft_space: "Space Grotesk", ft_inter: "Inter", ft_playfair: "Playfair Display", ft_nunito: "Nunito" },
+    es: { appearance: "Apariencia", appearanceSub: "Tema y fuente", themeTitle: "Tema", fontTitle: "Fuente", th_cream: "Crema", th_wine: "Vino", th_midnight: "Medianoche", th_forest: "Bosque", th_lavender: "Lavanda", th_noir: "Negro", ft_space: "Space Grotesk", ft_inter: "Inter", ft_playfair: "Playfair Display", ft_nunito: "Nunito" }
+  };
+  for (const l in XG) Object.assign(X[l], XG[l]);
+
+  const XH = {
+    en: { photoRow: "Choose your own photo", bgRow: "Choose a background", slideTitle: "Slideshow", slideOff: "Off: only your main photo", slideOn: "On: changes every 30 seconds", resetRow: "Reset photo", bgTitle: "Backgrounds", photoSaved: "Photo saved", photoReset: "Photo reset", sampleFont: "Happy birthday, Maya", fontGroupClassic: "Classic", fontGroupRound: "Round and soft", fontGroupModern: "Modern", bg_wine: "Wine", bg_sunset: "Sunset", bg_lavender: "Lavender", bg_night: "Night sky", bg_rose: "Rosé", bg_ocean: "Ocean", bg_photo: "Your photo", ft_quicksand: "Quicksand", ft_comfortaa: "Comfortaa", ft_fredoka: "Fredoka", ft_varela: "Varela Round", ft_baloo: "Baloo 2" },
+    fr: { photoRow: "Choisir ma photo", bgRow: "Choisir un fond", slideTitle: "Diaporama", slideOff: "Désactivé : seulement votre photo", slideOn: "Activé : change toutes les 30 secondes", resetRow: "Réinitialiser la photo", bgTitle: "Fonds", photoSaved: "Photo enregistrée", photoReset: "Photo réinitialisée", sampleFont: "Joyeux anniversaire, Maya", fontGroupClassic: "Classique", fontGroupRound: "Arrondies et douces", fontGroupModern: "Moderne", bg_wine: "Vin", bg_sunset: "Coucher de soleil", bg_lavender: "Lavande", bg_night: "Ciel nocturne", bg_rose: "Rosé", bg_ocean: "Océan", bg_photo: "Votre photo", ft_quicksand: "Quicksand", ft_comfortaa: "Comfortaa", ft_fredoka: "Fredoka", ft_varela: "Varela Round", ft_baloo: "Baloo 2" },
+    es: { photoRow: "Elegir mi foto", bgRow: "Elegir un fondo", slideTitle: "Presentación", slideOff: "Desactivado: solo tu foto principal", slideOn: "Activado: cambia cada 30 segundos", resetRow: "Restablecer foto", bgTitle: "Fondos", photoSaved: "Foto guardada", photoReset: "Foto restablecida", sampleFont: "¡Feliz cumpleaños, Maya!", fontGroupClassic: "Clásica", fontGroupRound: "Redondeadas y suaves", fontGroupModern: "Moderna", bg_wine: "Vino", bg_sunset: "Atardecer", bg_lavender: "Lavanda", bg_night: "Cielo nocturno", bg_rose: "Rosé", bg_ocean: "Océano", bg_photo: "Tu foto", ft_quicksand: "Quicksand", ft_comfortaa: "Comfortaa", ft_fredoka: "Fredoka", ft_varela: "Varela Round", ft_baloo: "Baloo 2" }
+  };
+  for (const l in XH) Object.assign(X[l], XH[l]);
+
+  const XI = {
+    en: { addPerson: "Add person", personHint: "A person shows up here once they have a date." },
+    fr: { addPerson: "Ajouter une personne", personHint: "Une personne apparaît ici dès qu'elle a une date." },
+    es: { addPerson: "Añadir persona", personHint: "Una persona aparece aquí cuando tiene una fecha." }
+  };
+  for (const l in XI) Object.assign(X[l], XI[l]);
+
+  const XJ = {
+    en: { dupWarn: n => `${n} is already in your list.`, dupAnyway: "Add anyway" },
+    fr: { dupWarn: n => `${n} est déjà dans votre liste.`, dupAnyway: "Ajouter quand même" },
+    es: { dupWarn: n => `${n} ya está en tu lista.`, dupAnyway: "Añadir igualmente" }
+  };
+  for (const l in XJ) Object.assign(X[l], XJ[l]);
+
+  const XK = {
+    en: { dyk: "Did you know?", sinceBorn: name => `days since ${name} was born`, weekendsBig: n => `${n} weekends`, togetherSub: "you have spent together", daysCount: n => `${n} days`, untilBday: name => `days until ${name}'s birthday`, weekdayBday: name => `is the day of ${name}'s next birthday`, bdaysMonth: "birthdays this month", datesInList: "dates in your list" },
+    fr: { dyk: "Le saviez-vous ?", sinceBorn: name => `jours depuis la naissance de ${name}`, weekendsBig: n => `${n} week-ends`, togetherSub: "passés ensemble", daysCount: n => `${n} jours`, untilBday: name => `jours avant l'anniversaire de ${name}`, weekdayBday: name => `est le jour du prochain anniversaire de ${name}`, bdaysMonth: "anniversaires ce mois-ci", datesInList: "dates dans votre liste" },
+    es: { dyk: "¿Sabías que?", sinceBorn: name => `días desde que nació ${name}`, weekendsBig: n => `${n} fines de semana`, togetherSub: "que han pasado juntos", daysCount: n => `${n} días`, untilBday: name => `días para el cumpleaños de ${name}`, weekdayBday: name => `es el día del próximo cumpleaños de ${name}`, bdaysMonth: "cumpleaños este mes", datesInList: "fechas en tu lista" }
+  };
+  for (const l in XK) Object.assign(X[l], XK[l]);
+
+  function detectLang() {
+    const n = (navigator.language || "en").slice(0, 2).toLowerCase();
+    return T[n] ? n : "en";
+  }
+  let lang = localStorage.getItem(LANG_KEY) || detectLang();
+  function t(key, ...args) {
+    const v = (T[lang] && T[lang][key] !== undefined) ? T[lang][key]
+      : (X[lang] && X[lang][key] !== undefined) ? X[lang][key]
+      : (T.en[key] !== undefined ? T.en[key] : X.en[key]);
+    return typeof v === "function" ? v(...args) : v;
+  }
+  function loc() { return LOCALES[lang] || "en-US"; }
+  function monthShort(m) { return new Date(2000, m, 1).toLocaleDateString(loc(), { month: "short" }); }
+  function monthLong(y, m) { return new Date(y, m, 1).toLocaleDateString(loc(), { month: "long", year: "numeric" }); }
+
+  function applyStatic() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+    document.querySelectorAll("[data-i18n-aria]").forEach(el => { el.setAttribute("aria-label", t(el.dataset.i18nAria)); });
+    document.getElementById("privacyText").textContent = t("privacyText");
+    document.getElementById("langSelect").value = lang;
+  }
+
+  const SOON = {
+    en: { title: "Coming soon", text: "Stay tuned!", ok: "OK" },
+    fr: { title: "Bientôt disponible", text: "Restez à l'écoute !", ok: "OK" },
+    es: { title: "Próximamente", text: "¡Mantente atento!", ok: "OK" }
+  };
+  function showComing() {
+    const s = SOON[lang] || SOON.en;
+    document.getElementById("comingTitle").textContent = s.title;
+    document.getElementById("comingText").textContent = s.text;
+    document.getElementById("comingOk").textContent = s.ok;
+    document.getElementById("modalBg").classList.add("open");
+    document.getElementById("comingModal").classList.add("open");
+  }
+  function hideComing() {
+    document.getElementById("modalBg").classList.remove("open");
+    document.getElementById("comingModal").classList.remove("open");
+  }
+
+  let items = load();
+  let view = "overview";
+  let typeFilter = "all";
+  let editingId = null;
+  let detailId = null;
+  let calMonth = null;
+  let pwEditing = false;
+
+  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } }
+  function persist() { try { localStorage.setItem(KEY, JSON.stringify(items)); } catch {} }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  const utcDay = (y, m, d) => Date.UTC(y, m, d) / 86400000;
+  const isLeap = y => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+
+  function nextOccurrence(item) {
+    const [yStr, mStr, dStr] = item.date.split("-");
+    const m = parseInt(mStr, 10) - 1;
+    const d = parseInt(dStr, 10);
+    const origYear = yStr ? parseInt(yStr, 10) : null;
+    const n = new Date();
+    const todayDay = utcDay(n.getFullYear(), n.getMonth(), n.getDate());
+    const candidate = y => {
+      const day = (m === 1 && d === 29 && !isLeap(y)) ? 28 : d;
+      return { y, day, serial: utcDay(y, m, day) };
+    };
+    let c = candidate(n.getFullYear());
+    if (c.serial < todayDay) c = candidate(c.y + 1);
+    return {
+      year: c.y, day: c.day, month: m,
+      days: c.serial - todayDay,
+      years: origYear ? c.y - origYear : null,
+    };
+  }
+  function countdownText(days) {
+    if (days === 0) return t("todayLbl");
+    if (days === 1) return t("tomorrow");
+    if (days <= 14) return t("inDays", days);
+    if (days < 60) return t("inWeeks", Math.round(days / 7));
+    return t("inMonths", Math.round(days / 30));
+  }
+  function ageText(it, occ) {
+    if (occ.years == null) return "";
+    return it.type === "birthday" ? t("turns", occ.years) : t("years", occ.years);
+  }
+  function fullDate(it) {
+    const [y, mo, d] = it.date.split("-");
+    const dt = new Date(y ? parseInt(y, 10) : 2000, parseInt(mo, 10) - 1, parseInt(d, 10));
+    return dt.toLocaleDateString(loc(), { month: "short", day: "numeric", year: y ? "numeric" : undefined });
+  }
+  function withOcc() { return items.map(it => ({ it, occ: nextOccurrence(it) })).sort((a, b) => a.occ.days - b.occ.days); }
+  function typeLabel(it) { return it.type === "birthday" ? t("birthday") : t("anniversary"); }
+
+  function entryHTML({ it, occ }) {
+    return `
+      <div class="swipe" data-id="${it.id}"><div class="swipe-actions"><button class="sw-edit" data-id="${it.id}">${t("editTitle")}</button><button class="sw-del" data-id="${it.id}">${t("delete")}</button></div>
+      <div class="entry ${occ.days === 0 ? "today" : ""}" data-id="${it.id}">
+        <div class="badge"><span class="m">${monthShort(occ.month)}</span><span class="d">${occ.day}</span></div>
+        <div class="body">
+          <div class="name">${esc(it.name)}</div>
+          <div class="meta">${it.rel ? esc(it.rel) + " · " : ""}${typeLabel(it)}${ageText(it, occ) ? " · " + ageText(it, occ) : ""}</div>
+        </div>
+        <div class="countdown">${countdownText(occ.days)}</div>
+      </div></div>`;
+  }
+  function emptyHTML(msg) { return `<div class="empty">${msg}</div>`; }
+  function setView(html) {
+    document.getElementById("view").innerHTML = html;
+    document.querySelectorAll(".tab").forEach(tb => tb.classList.toggle("active", tb.dataset.view === view));
+  }
+
+  function renderOverview() {
+    document.getElementById("pageTitle").textContent = t("overview");
+    const q = (window._q || "").toLowerCase();
+    const all = withOcc()
+      .filter(x => typeFilter === "all" || x.it.type === typeFilter)
+      .filter(x => !q || (x.it.name + " " + (x.it.rel || "") + " " + (x.it.notes || "")).toLowerCase().includes(q));
+    let html = `
+      <input class="search" id="search" type="search" placeholder="${t("searchPh")}" value="${esc(window._q || "")}">
+      <div class="chips">
+        ${["all","birthday","anniversary"].map(tp => `<button class="chip ${typeFilter === tp ? "active" : ""}" data-type="${tp}">${tp === "all" ? t("all") : tp === "birthday" ? t("birthdays") : t("anniversaries")}</button>`).join("")}
+      </div>`;
+    if (!items.length) html += emptyHTML(t("noDates"));
+    else if (!all.length) html += emptyHTML(t("nothingMatches"));
+    else html += all.map(entryHTML).join("");
+    setView(html);
+    const s = document.getElementById("search");
+    s.oninput = e => {
+      window._q = e.target.value;
+      renderOverview();
+      const ns = document.getElementById("search");
+      ns.focus(); ns.setSelectionRange(ns.value.length, ns.value.length);
+    };
+    document.querySelectorAll(".chip").forEach(c => c.onclick = () => { typeFilter = c.dataset.type; renderOverview(); });
+  }
+
+  function renderLive() {
+    document.getElementById("pageTitle").textContent = t("live");
+    const soon = withOcc().filter(x => x.occ.days <= 30);
+    let html = "";
+    if (soon.length) {
+      const first = soon[0];
+      html += `
+        <div class="hero">
+          <div class="label">${t("nextUp")}</div>
+          <div class="big">${esc(first.it.name)}</div>
+          <div class="sub">${countdownText(first.occ.days)} · ${fullDate(first.it)}${ageText(first.it, first.occ) ? " · " + ageText(first.it, first.occ) : ""}</div>
+        </div>
+        <div class="section">${t("next30")}</div>
+        ${soon.map(entryHTML).join("")}`;
+    } else if (items.length) {
+      html += emptyHTML(t("nothingIn30"));
+    } else {
+      html += emptyHTML(t("nothingHere"));
+    }
+    setView(html);
+  }
+
+  function renderCalendar() {
+    document.getElementById("pageTitle").textContent = t("calendar");
+    const now = new Date();
+    if (!calMonth) calMonth = { y: now.getFullYear(), m: now.getMonth() };
+    const { y, m } = calMonth;
+
+    const byDay = {};
+    items.forEach(it => {
+      const occ = nextOccurrence(it);
+      const mo = parseInt(it.date.split("-")[1], 10) - 1;
+      if (mo === m) (byDay[occ.day] ||= []).push(it);
+    });
+
+    const firstDow = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const isThisMonth = now.getFullYear() === y && now.getMonth() === m;
+
+    let cells = "";
+    for (let i = 0; i < firstDow; i++) cells += `<div class="cal-cell blank"></div>`;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const has = byDay[d] || [];
+      const today = isThisMonth && now.getDate() === d;
+      cells += `
+        <div class="cal-cell ${today ? "today" : ""}" data-day="${d}">
+          <span>${d}</span>
+          <div class="dots">${has.slice(0, 3).map(it => `<i class="dot ${it.type}"></i>`).join("")}</div>
+        </div>`;
+    }
+
+    const weekdays = [0,1,2,3,4,5,6].map(i => new Date(2024, 0, 7 + i).toLocaleDateString(loc(), { weekday: "narrow" }))
+      .map(w => `<span>${w}</span>`).join("");
+
+    setView(`
+      <div class="cal-head">
+        <button class="nav-btn" id="prevMonth" aria-label="‹">‹</button>
+        <div class="cal-title">${monthLong(y, m)}</div>
+        <button class="nav-btn" id="nextMonth" aria-label="›">›</button>
+      </div>
+      <div class="cal-week">${weekdays}</div>
+      <div class="cal-grid">${cells}</div>
+      <div class="legend"><span><i class="dot birthday"></i>${t("birthday")}</span><span><i class="dot anniversary"></i>${t("anniversary")}</span></div>
+      <div id="dayList"></div>`);
+
+    document.getElementById("prevMonth").onclick = () => {
+      calMonth = m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 };
+      renderCalendar();
+    };
+    document.getElementById("nextMonth").onclick = () => {
+      calMonth = m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 };
+      renderCalendar();
+    };
+    document.querySelectorAll(".cal-cell[data-day]").forEach(cell => cell.onclick = () => {
+      const d = parseInt(cell.dataset.day, 10);
+      const list = byDay[d] || [];
+      document.querySelectorAll(".cal-cell").forEach(c => c.classList.remove("selected"));
+      cell.classList.add("selected");
+      document.getElementById("dayList").innerHTML = list.length
+        ? `<div class="section">${monthShort(m)} ${d}</div>` + list.map(it => entryHTML({ it, occ: nextOccurrence(it) })).join("")
+        : `<div class="empty" style="padding:20px">${t("nothingOn", monthShort(m), d)}</div>`;
+    });
+  }
+
+  function render() {
+    if (view === "overview") renderOverview();
+    else if (view === "live") renderLive();
+    else renderCalendar();
+  }
+
+  function openEdit(id = null) {
+    editingId = id;
+    const it = id ? items.find(x => x.id === id) : null;
+    document.getElementById("editTitle").textContent = it ? t("editDate") : t("addDate");
+    document.getElementById("fType").value = it?.type || (typeFilter === "anniversary" ? "anniversary" : "birthday");
+    document.getElementById("fName").value = it?.name || "";
+    document.getElementById("fRel").value = it?.rel || "";
+    document.getElementById("fDate").value = it?.date || "";
+    document.getElementById("fRemind").value = String(it?.remind ?? 3);
+    document.getElementById("fNotes").value = it?.notes || "";
+    const delBtn = document.getElementById("fDelete");
+    delBtn.style.display = it ? "" : "none";
+    delBtn.textContent = t("delete");
+    delete delBtn.dataset.armed;
+    const sv = document.getElementById("fSave");
+    delete sv.dataset.dupOk;
+    sv.textContent = t("save");
+    document.getElementById("dupWarn").style.display = "none";
+    openSheet("editSheet");
+  }
+  function saveEdit() {
+    const name = document.getElementById("fName").value.trim();
+    const date = document.getElementById("fDate").value;
+    if (!name) return toast(t("addName"));
+    if (!date) return toast(t("pickDate"));
+    const sv = document.getElementById("fSave");
+    if (!editingId && items.some(x => x.name.trim().toLowerCase() === name.toLowerCase()) && sv.dataset.dupOk !== "1") {
+      const w = document.getElementById("dupWarn");
+      w.textContent = t("dupWarn", name);
+      w.style.display = "";
+      sv.dataset.dupOk = "1";
+      sv.textContent = t("dupAnyway");
+      return;
+    }
+    const data = {
+      type: document.getElementById("fType").value,
+      name, date,
+      rel: document.getElementById("fRel").value.trim(),
+      remind: parseInt(document.getElementById("fRemind").value, 10),
+      notes: document.getElementById("fNotes").value.trim(),
+    };
+    if (editingId) Object.assign(items.find(x => x.id === editingId), data);
+    else items.push({ id: uid(), ...data });
+    persist(); closeAll(); render();
+    toast(t("saved"));
+    if (navigator.vibrate) navigator.vibrate(10);
+  }
+  function deleteItem(id) {
+    const btn = document.getElementById("fDelete");
+    if (btn.dataset.armed !== "1") {
+      btn.dataset.armed = "1";
+      btn.textContent = t("tapAgain");
+      return;
+    }
+    items = items.filter(x => x.id !== id);
+    persist(); closeAll(); render();
+  }
+
+  function wishFor(it, occ) {
+    if (it.type === "birthday") return t("wishBirthday", it.name);
+    return occ.years ? t("wishAnnivYears", it.name, occ.years) : t("wishAnniv", it.name);
+  }
+
+  function showDetail(id) {
+    detailId = id;
+    const it = items.find(x => x.id === id);
+    if (!it) return;
+    const occ = nextOccurrence(it);
+    const hasAge = occ.years != null;
+    const wish = wishFor(it, occ);
+    document.getElementById("detailBody").innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div>
+          <div class="meta">${it.rel ? esc(it.rel) + " · " : ""}${typeLabel(it)}</div>
+          <h2 style="margin:4px 0 0;font-size:24px">${esc(it.name)}</h2>
+        </div>
+        <button class="btn ghost" id="dEdit" style="padding:8px 14px">${t("editTitle")}</button>
+      </div>
+      <div class="detail-big">${fullDate(it)}</div>
+      <div class="meta">${countdownText(occ.days)}${hasAge ? " · " + ageText(it, occ) : ""}</div>
+      ${it.notes ? `<div class="msg">${esc(it.notes)}</div>` : ""}
+      <label>${t("messageIdea")}</label>
+      <div class="msg">${esc(wish)}</div>
+      <div class="row-btns"><button class="btn" id="copyWish">${t("copyMessage")}</button></div>
+      <div class="row-btns end"><button class="btn ghost" id="dClose">${t("close")}</button></div>`;
+    document.getElementById("dEdit").onclick = () => { closeAll(); openEdit(id); };
+    document.getElementById("dClose").onclick = closeAll;
+    document.getElementById("copyWish").onclick = () => copyText(wish);
+    openSheet("detailSheet");
+  }
+
+  function exportData() {
+    const blob = new Blob([JSON.stringify({ app: KEY, items }, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `dates-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  function importData(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        const incoming = Array.isArray(data) ? data : data.items;
+        if (!Array.isArray(incoming)) throw new Error();
+        const valid = incoming.filter(x => x && x.name && x.date && x.type);
+        const ids = new Set(items.map(x => x.id));
+        valid.forEach(x => { if (!ids.has(x.id)) items.push({ ...x, id: x.id || uid() }); });
+        persist(); closeAll(); render();
+        toast(t("imported", valid.length));
+      } catch { toast(t("fileBad")); }
+    };
+    reader.readAsText(file);
+  }
+
+  async function enableNotifications() {
+    if (!("Notification" in window)) return toast(t("notSupported"));
+    const res = await Notification.requestPermission();
+    toast(res === "granted" ? t("notifOn") : t("notifBlocked"));
+    if (res === "granted") checkNotifications();
+  }
+  function checkNotifications() {
+    if (localStorage.getItem(NOTIFY_OFF)) return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const seen = JSON.parse(localStorage.getItem(KEY + "-notified") || "{}");
+    items.forEach(it => {
+      const occ = nextOccurrence(it);
+      const tag = `${it.id}-${occ.year}`;
+      if (occ.days <= (it.remind ?? 3) && !seen[tag]) {
+        new Notification(occ.days === 0 ? t("notifToday", it.name) : t("notifIn", it.name, occ.days),
+          { body: it.type === "birthday" ? t("birthdayComing") : t("anniversaryComing") });
+        seen[tag] = true;
+      }
+    });
+    localStorage.setItem(KEY + "-notified", JSON.stringify(seen));
+  }
+
+  async function hashPw(s) {
+    if (window.crypto && crypto.subtle) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("dates:" + s));
+      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+    let h = 0;
+    for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) | 0;
+    return "fallback:" + h;
+  }
+  async function trySavePassword() {
+    const a = document.getElementById("pwNew").value;
+    const b = document.getElementById("pwConfirm").value;
+    if (a.length < 4 || a !== b) return;
+    localStorage.setItem(PW_KEY, await hashPw(a));
+    pwEditing = false;
+    document.getElementById("pwNew").value = "";
+    document.getElementById("pwConfirm").value = "";
+    refreshLockStatus();
+    toast(t("pwSaved"));
+  }
+  function togglePassword() {
+    const pwToggle = document.getElementById("pwToggle");
+    if (pwToggle.checked) {
+      pwEditing = true;
+      refreshLockStatus();
+      document.getElementById("pwNew").focus();
+    } else {
+      pwEditing = false;
+      if (localStorage.getItem(PW_KEY)) {
+        localStorage.removeItem(PW_KEY);
+        toast(t("pwOff"));
+      }
+      refreshLockStatus();
+    }
+  }
+
+  function bioSupported() {
+    return !!(window.isSecureContext && window.PublicKeyCredential && navigator.credentials);
+  }
+  async function enableBio() {
+    if (!bioSupported()) return toast(t("needHttps"));
+    try {
+      const cred = await navigator.credentials.create({
+        publicKey: {
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          rp: { name: "Dates" },
+          user: { id: crypto.getRandomValues(new Uint8Array(16)), name: "me", displayName: "Me" },
+          pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+          authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred" },
+          timeout: 60000,
+        },
+      });
+      localStorage.setItem(BIO_KEY, JSON.stringify([...new Uint8Array(cred.rawId)]));
+      refreshLockStatus();
+      toast(t("fpEnabled"));
+    } catch (err) {
+      console.log("Fingerprint setup error:", err);
+      toast(err && err.name === "NotAllowedError"
+        ? t("cancelledBlocked")
+        : t("cantSetup", err?.name || t("unknownError")));
+    }
+  }
+  function disableBio() {
+    localStorage.removeItem(BIO_KEY);
+    refreshLockStatus();
+    toast(t("fpDisabled"));
+  }
+  async function bioUnlock() {
+    const ids = JSON.parse(localStorage.getItem(BIO_KEY) || "null");
+    if (!ids) return false;
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        allowCredentials: [{ type: "public-key", id: new Uint8Array(ids) }],
+        userVerification: "required",
+        timeout: 60000,
+      },
+    });
+    return !!assertion;
+  }
+
+  function refreshLockStatus() {
+    const hasPw = !!localStorage.getItem(PW_KEY);
+    const hasBio = !!localStorage.getItem(BIO_KEY);
+    const notifyOn = !localStorage.getItem(NOTIFY_OFF) && "Notification" in window && Notification.permission === "granted";
+
+    document.getElementById("pwToggle").checked = hasPw || pwEditing;
+    document.getElementById("pwFields").style.display = (!hasPw && pwEditing) ? "block" : "none";
+    document.getElementById("pwStatus").textContent = hasPw ? t("pwOnStatus") : t("off");
+
+    document.getElementById("bioToggle").checked = hasBio;
+    document.getElementById("bioStatus").textContent = hasBio ? t("fpOnStatus") : t("off");
+
+    document.getElementById("notifyToggle").checked = notifyOn;
+    document.getElementById("autoLock").value = localStorage.getItem(AL_KEY) ?? "5";
+    const pc = document.getElementById("peopleCount");
+    if (pc) pc.textContent = t("peopleCount", peopleGroups().length);
+  }
+
+  function showLock() {
+    return new Promise(resolve => {
+      const hasPw = !!localStorage.getItem(PW_KEY);
+      const hasBio = !!localStorage.getItem(BIO_KEY);
+      const lock = document.getElementById("lock");
+      const unlockBtn = document.getElementById("unlockBtn");
+      const pwArea = document.getElementById("pwArea");
+      const usePwBtn = document.getElementById("usePwBtn");
+      const input = document.getElementById("lockInput");
+      const msg = document.getElementById("lockMsg");
+
+      const finish = () => {
+        lock.classList.remove("show");
+        setTimeout(() => { lock.style.display = "none"; resolve(); }, 300);
+      };
+      const fail = text => {
+        msg.textContent = text;
+        lock.classList.remove("shake");
+        void lock.offsetWidth;
+        lock.classList.add("shake");
+      };
+      const showPw = () => {
+        pwArea.style.display = "block";
+        usePwBtn.style.display = "none";
+        setTimeout(() => input.focus(), 50);
+      };
+      const submitPw = async () => {
+        const ok = (await hashPw(input.value)) === localStorage.getItem(PW_KEY);
+        if (ok) { msg.textContent = ""; finish(); }
+        else { input.value = ""; fail(t("wrongPassword")); input.focus(); }
+      };
+      const tryBio = async () => {
+        msg.textContent = "";
+        try {
+          if (await bioUnlock()) return finish();
+        } catch {}
+        fail(t("couldntVerify"));
+        if (hasPw) showPw();
+      };
+
+      unlockBtn.onclick = () => {
+        if (hasBio) tryBio();
+        else showPw();
+      };
+      usePwBtn.style.display = hasPw && hasBio ? "" : "none";
+      usePwBtn.onclick = showPw;
+      document.getElementById("lockGo").onclick = submitPw;
+      input.onkeydown = e => { if (e.key === "Enter") submitPw(); };
+
+      pwArea.style.display = "none";
+      input.value = "";
+      msg.textContent = "";
+      lock.style.display = "flex";
+      requestAnimationFrame(() => lock.classList.add("show"));
+    });
+  }
+
+  function relock() {
+    const main = document.querySelector("main");
+    closeAll();
+    document.getElementById("aboutPage").classList.remove("open");
+    main.style.opacity = "0";
+    showLock().then(() => {
+      main.style.opacity = "";
+      main.classList.remove("pop");
+      void main.offsetWidth;
+      main.classList.add("pop");
+    });
+  }
+  let hiddenAt = 0;
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    const setting = localStorage.getItem(AL_KEY) ?? "5";
+    const locked = !!localStorage.getItem(PW_KEY) || !!localStorage.getItem(BIO_KEY);
+    if (!hiddenAt || !locked || setting === "never") return;
+    if (Date.now() - hiddenAt >= parseFloat(setting) * 60000) relock();
+    hiddenAt = 0;
+  });
+
+  const THEME_KEY = "bday-reminder-theme";
+  const FONT_KEY = "bday-reminder-font";
+  const THEMES = {
+    cream: { "--bg": "#f7f1e8", "--card": "#fffaf3", "--ink": "#3a2e28", "--muted": "#8c7b70", "--pink": "#a84b44", "--lock-pink": "#e8a598", "--maroon": "#c2614f", "--line": "#eadfd2", "--today": "#f6e2d2", "--tabbar": "#fffaf3", "--meta": "#f7f1e8" },
+    wine: { "--bg": "#1a1214", "--card": "#2a1f22", "--ink": "#ffffff", "--muted": "#b59ea3", "--pink": "#e8a2ab", "--lock-pink": "#ffb3bb", "--maroon": "#8b1e33", "--line": "#3a2d30", "--today": "#4a1d26", "--tabbar": "#2b2123", "--meta": "#1a1214" },
+    midnight: { "--bg": "#0f1626", "--card": "#1a2438", "--ink": "#eef2ff", "--muted": "#8fa0c2", "--pink": "#9bb8ff", "--lock-pink": "#9bb8ff", "--maroon": "#3d5fd9", "--line": "#2a3654", "--today": "#22304d", "--tabbar": "#1a2438", "--meta": "#0f1626" },
+    forest: { "--bg": "#ecf2ea", "--card": "#f8fbf6", "--ink": "#203025", "--muted": "#6d7f70", "--pink": "#3f6b4a", "--lock-pink": "#9cc7a6", "--maroon": "#3f7d57", "--line": "#d6e2d3", "--today": "#dcebd9", "--tabbar": "#f8fbf6", "--meta": "#ecf2ea" },
+    lavender: { "--bg": "#f4f0fa", "--card": "#fdfbff", "--ink": "#2e2640", "--muted": "#7d7291", "--pink": "#7b4fb3", "--lock-pink": "#c3a9ea", "--maroon": "#8a5bd1", "--line": "#e2d9f0", "--today": "#ebe1f8", "--tabbar": "#fdfbff", "--meta": "#f4f0fa" },
+    noir: { "--bg": "#121212", "--card": "#1e1e1e", "--ink": "#f2f2f2", "--muted": "#9a9a9a", "--pink": "#d4d4d4", "--lock-pink": "#cfcfcf", "--maroon": "#3a3a3a", "--line": "#2e2e2e", "--today": "#2a2a2a", "--tabbar": "#1e1e1e", "--meta": "#121212" }
+  };
+  const FONTS = {
+    space: '"Space Grotesk"',
+    inter: '"Inter"',
+    playfair: '"Playfair Display", Georgia, serif',
+    nunito: '"Nunito"',
+    quicksand: '"Quicksand"',
+    comfortaa: '"Comfortaa"',
+    fredoka: '"Fredoka"',
+    varela: '"Varela Round"',
+    baloo: '"Baloo 2"'
+  };
+  function currentTheme() { const k = localStorage.getItem(THEME_KEY); return THEMES[k] ? k : "cream"; }
+  function currentFont() { const k = localStorage.getItem(FONT_KEY); return FONTS[k] ? k : "space"; }
+  function applyAppearance() {
+    const th = THEMES[currentTheme()];
+    const root = document.documentElement;
+    Object.entries(th).forEach(([k, v]) => { if (k !== "--meta") root.style.setProperty(k, v); });
+    document.body.style.fontFamily = `${FONTS[currentFont()]}, -apple-system, system-ui, "Segoe UI", Roboto, sans-serif`;
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", th["--meta"]);
+  }
+  const GRADS = {
+    wine: "linear-gradient(160deg,#5a0f1f,#8b1e33 55%,#c2435a)",
+    sunset: "linear-gradient(160deg,#4b1d52,#c84b72 55%,#f4a261)",
+    lavender: "linear-gradient(160deg,#3b3a7a,#7b5fc4 60%,#e2b3e8)",
+    night: "linear-gradient(160deg,#060a18,#1b2a5c 60%,#4a3a7a)",
+    rose: "linear-gradient(160deg,#9a4f5f,#e6a1b0 60%,#fbe3da)",
+    ocean: "linear-gradient(160deg,#073a4b,#1a7593 60%,#9adbd9)"
+  };
+  const BG_KEY = "bday-reminder-bg";
+  const PHOTO_KEY = "bday-reminder-photo";
+  const SLIDE_KEY = "bday-reminder-slide";
+  const FONT_GROUPS = [
+    { label: "fontGroupClassic", fonts: ["playfair"] },
+    { label: "fontGroupRound", fonts: ["quicksand", "nunito", "comfortaa", "fredoka", "varela", "baloo"] },
+    { label: "fontGroupModern", fonts: ["space", "inter"] }
+  ];
+
+  let factIdx = 0;
+  function buildFacts() {
+    const out = [];
+    const now = new Date();
+    const todayMs = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    const DAY = 86400000;
+    const nf = n => n.toLocaleString(loc());
+    const bdays = items.filter(x => x.type === "birthday");
+
+    items.forEach(it => {
+      const [y, mo, d] = it.date.split("-");
+      if (!y) return;
+      const days = Math.floor((todayMs - Date.UTC(+y, +mo - 1, +d)) / DAY);
+      if (days < 0) return;
+      if (it.type === "birthday") out.push({ big: nf(days), sub: t("sinceBorn", it.name) });
+      else out.push({ big: t("weekendsBig", nf(Math.floor(days / 7))), sub: t("togetherSub") });
+    });
+
+    if (bdays.length) {
+      const next = bdays.map(it => ({ it, occ: nextOccurrence(it) })).sort((a, b) => a.occ.days - b.occ.days)[0];
+      out.push({ big: t("daysCount", next.occ.days), sub: t("untilBday", next.it.name) });
+      const weekday = new Date(next.occ.year, next.occ.month, next.occ.day).toLocaleDateString(loc(), { weekday: "long" });
+      out.push({ big: weekday, sub: t("weekdayBday", next.it.name) });
+      const thisMonth = bdays.filter(it => parseInt(it.date.split("-")[1], 10) - 1 === now.getMonth()).length;
+      if (thisMonth > 0) out.push({ big: nf(thisMonth), sub: t("bdaysMonth") });
+    }
+    if (items.length) out.push({ big: nf(items.length), sub: t("datesInList") });
+    return out;
+  }
+  function renderFact() {
+    const slot = document.getElementById("factSlot");
+    if (!slot) return;
+    const facts = buildFacts();
+    if (!facts.length) { slot.innerHTML = ""; return; }
+    factIdx = ((factIdx % facts.length) + facts.length) % facts.length;
+    const f = facts[factIdx];
+    slot.innerHTML = `
+      <div class="fact">
+        <div class="fact-label">${t("dyk")}</div>
+        <div class="fact-big">${f.big}</div>
+        <div class="fact-sub">${f.sub}</div>
+        <div class="fact-dots">${facts.map((_, i) => `<button class="fact-dot ${i === factIdx ? "on" : ""}" data-fact="${i}" aria-label="${i + 1}"></button>`).join("")}</div>
+      </div>`;
+  }
+
+  function renderThemes() {
+    const cur = currentTheme();
+    document.getElementById("themeGrid").innerHTML = Object.keys(THEMES).map(k => `
+      <button class="swatch-btn" data-theme="${k}">
+        <span class="swatch ${k === cur ? "sel" : ""}" style="background:${THEMES[k]["--bg"]}">
+          <span class="swatch-dot" style="background:${THEMES[k]["--maroon"]}"></span>
+        </span>
+        <span>${t("th_" + k)}</span>
+      </button>`).join("");
+  }
+  function renderFontList() {
+    const cur = currentFont();
+    document.getElementById("fontList").innerHTML = FONT_GROUPS.map(g => `
+      <div class="sec-label">${t(g.label)}</div>
+      <div class="card">${g.fonts.map(k => `
+        <button class="row action" data-font="${k}">
+          <span class="radio ${k === cur ? "on" : ""}"></span>
+          <div class="rtext">
+            <div class="rtitle" style='font-family:${FONTS[k]}'>${t("ft_" + k)}</div>
+            <div class="rsub" style='font-family:${FONTS[k]}'>${t("sampleFont")}</div>
+          </div>
+        </button>`).join("")}</div>`).join("");
+  }
+  function refreshAppearance() {
+    const on = localStorage.getItem(SLIDE_KEY) === "on";
+    const st = document.getElementById("slideToggle");
+    if (st) st.checked = on;
+    const ss = document.getElementById("slideSub");
+    if (ss) ss.textContent = on ? t("slideOn") : t("slideOff");
+    const fc = document.getElementById("fontCurrent");
+    if (fc) fc.textContent = t("ft_" + currentFont());
+  }
+  function renderAppearance() { renderThemes(); renderFontList(); refreshAppearance(); }
+
+  function bgOptions() {
+    const opts = [];
+    if (localStorage.getItem(PHOTO_KEY)) opts.push("photo");
+    Object.keys(GRADS).forEach(k => opts.push("grad:" + k));
+    return opts;
+  }
+  function bgStyle(v) {
+    if (v === "photo") return `url("${localStorage.getItem(PHOTO_KEY)}") center / cover no-repeat`;
+    return GRADS[v.slice(5)];
+  }
+  function applyBackground() {
+    const v = localStorage.getItem(BG_KEY);
+    const layer = document.getElementById("bgLayer");
+    if (!layer) return;
+    if (!v || (v === "photo" && !localStorage.getItem(PHOTO_KEY))) {
+      layer.classList.remove("on");
+      layer.style.background = "";
+      return;
+    }
+    layer.style.background = bgStyle(v);
+    layer.classList.add("on");
+  }
+  function renderBgs() {
+    const cur = localStorage.getItem(BG_KEY);
+    document.getElementById("bgGrid").innerHTML = bgOptions().map(v => {
+      const label = v === "photo" ? t("bg_photo") : t("bg_" + v.slice(5));
+      return `<button class="bg-tile ${cur === v ? "sel" : ""}" data-bg="${v}" style='background:${bgStyle(v)}'><span>${label}</span></button>`;
+    }).join("");
+  }
+  let slideTimer = null;
+  function startSlideshow() {
+    clearInterval(slideTimer);
+    if (localStorage.getItem(SLIDE_KEY) !== "on") return;
+    let i = bgOptions().indexOf(localStorage.getItem(BG_KEY));
+    slideTimer = setInterval(() => {
+      const opts = bgOptions();
+      i = (i + 1) % opts.length;
+      localStorage.setItem(BG_KEY, opts[i]);
+      applyBackground();
+    }, 30000);
+  }
+  function organizeGeneral() {
+    const label = document.querySelector('#settingsSheet [data-i18n="general"]');
+    const general = label && label.nextElementSibling;
+    const peopleBtn = document.getElementById("peopleBtn");
+    if (general && peopleBtn) general.appendChild(peopleBtn);
+    const appBtn = document.getElementById("appearanceBtn");
+    if (appBtn) appBtn.remove();
+    document.querySelectorAll('#settingsSheet [data-i18n="people"], #settingsSheet [data-i18n="appearance"]').forEach(label => {
+      const card = label.nextElementSibling;
+      label.remove();
+      if (card && card.classList.contains("card") && !card.children.length) card.remove();
+    });
+  }
+
+  function renderAppearanceOld() {
+    const cur = currentTheme();
+    const fk = currentFont();
+    document.getElementById("themeGrid").innerHTML = Object.keys(THEMES).map(k => `
+      <button class="swatch-btn" data-theme="${k}">
+        <span class="swatch ${k === cur ? "sel" : ""}" style="background:${THEMES[k]["--bg"]}">
+          <span class="swatch-dot" style="background:${THEMES[k]["--maroon"]}"></span>
+        </span>
+        <span>${t("th_" + k)}</span>
+      </button>`).join("");
+    document.getElementById("fontList").innerHTML = Object.keys(FONTS).map(k => `
+      <button class="row action" data-font="${k}">
+        <span class="font-sample" style='font-family:${FONTS[k]}'>Aa</span>
+        <div class="rtext"><div class="rtitle" style='font-family:${FONTS[k]}'>${t("ft_" + k)}</div></div>
+        ${k === fk ? '<span class="font-check">✓</span>' : ""}
+      </button>`).join("");
+  }
+
+  let selectedPerson = null;
+  function peopleGroups() {
+    const map = {};
+    items.forEach(it => {
+      const key = it.name.trim().toLowerCase();
+      if (!map[key]) map[key] = { name: it.name.trim(), rel: "", items: [] };
+      map[key].items.push(it);
+      if (!map[key].rel && it.rel) map[key].rel = it.rel;
+    });
+    return Object.values(map).sort((a, b) => a.name.localeCompare(b.name));
+  }
+  function renderPeople() {
+    const body = document.getElementById("peopleBody");
+    const title = document.getElementById("peopleTitle");
+    if (!selectedPerson) {
+      title.textContent = t("managePeople");
+      document.getElementById("addPersonRow").style.display = "";
+      document.getElementById("addPersonHint").style.display = "";
+      const groups = peopleGroups();
+      body.innerHTML = groups.length
+        ? `<div class="card">${groups.map((g, i) => `
+            <button class="row action" data-person="${i}">
+              <div class="rtext">
+                <div class="rtitle">${esc(g.name)}</div>
+                <div class="rsub">${[esc(g.rel), t("dateCount", g.items.length)].filter(Boolean).join(" · ")}</div>
+              </div>
+              <span class="chev">›</span>
+            </button>`).join("")}</div>`
+        : emptyHTML(t("nothingHere"));
+      body.querySelectorAll("[data-person]").forEach(b => b.onclick = () => {
+        selectedPerson = groups[parseInt(b.dataset.person, 10)].name.toLowerCase();
+        renderPeople();
+      });
+    } else {
+      const g = peopleGroups().find(x => x.name.toLowerCase() === selectedPerson);
+      if (!g) { selectedPerson = null; return renderPeople(); }
+      title.textContent = g.name;
+      document.getElementById("addPersonRow").style.display = "none";
+      document.getElementById("addPersonHint").style.display = "none";
+      body.innerHTML = `<div class="card">${g.items.map(it => `
+          <button class="row action" data-edit="${it.id}">
+            <div class="rtext">
+              <div class="rtitle">${typeLabel(it)}</div>
+              <div class="rsub">${fullDate(it)}${it.rel ? " · " + esc(it.rel) : ""}</div>
+            </div>
+            <span class="chev">›</span>
+          </button>`).join("")}</div>`;
+      body.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => {
+        closeAll();
+        openEdit(b.dataset.edit);
+      });
+    }
+  }
+
+  function copyText(text) {
+    const done = () => toast(t("copied"));
+    const fallback = () => {
+      const ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch {}
+      ta.remove(); done();
+    };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, fallback);
+    else fallback();
+  }
+  let toastTimer;
+  function toast(msg) {
+    const el = document.getElementById("toast");
+    el.textContent = msg; el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+  }
+  function openSheet(id) {
+    document.getElementById("overlay").classList.add("open");
+    document.getElementById(id).classList.add("open");
+  }
+  function closeAll() {
+    document.getElementById("overlay").classList.remove("open");
+    document.querySelectorAll(".sheet").forEach(s => s.classList.remove("open"));
+    detailId = null;
+  }
+
+  function swipeDelete(btn) {
+    if (btn.dataset.armed !== "1") {
+      btn.dataset.armed = "1";
+      btn.textContent = t("tapAgain");
+      return;
+    }
+    const id = btn.dataset.id;
+    items = items.filter(x => x.id !== id);
+    persist(); render();
+    toast(t("deleted"));
+  }
+
+  let swStartX = 0, swLastDx = 0, swActive = null;
+  const viewEl = document.getElementById("view");
+  viewEl.addEventListener("touchstart", e => {
+    swActive = e.target.closest(".swipe");
+    swStartX = e.touches[0].clientX;
+    swLastDx = 0;
+  }, { passive: true });
+  viewEl.addEventListener("touchmove", e => {
+    if (!swActive) return;
+    swLastDx = e.touches[0].clientX - swStartX;
+    if (Math.abs(swLastDx) < 6) return;
+    const base = swActive.classList.contains("open") ? -150 : 0;
+    const x = Math.min(0, Math.max(-150, base + swLastDx));
+    const entry = swActive.querySelector(".entry");
+    entry.style.transition = "none";
+    entry.style.transform = `translateX(${x}px)`;
+  }, { passive: true });
+  viewEl.addEventListener("touchend", () => {
+    if (!swActive) return;
+    const entry = swActive.querySelector(".entry");
+    const base = swActive.classList.contains("open") ? -150 : 0;
+    const finalX = base + swLastDx;
+    entry.style.transition = "";
+    entry.style.transform = "";
+    if (Math.abs(swLastDx) > 6) {
+      document.querySelectorAll(".swipe.open").forEach(s => { if (s !== swActive) s.classList.remove("open"); });
+      swActive.classList.toggle("open", finalX < -75);
+    }
+    swActive = null;
+  });
+
+  const TAB_ORDER = ["overview", "live", "calendar"];
+  let navStart = null;
+  function blockingUIOpen() {
+    return !!document.querySelector(".sheet.open, #aboutPage.open, #lock.show, #comingModal.open");
+  }
+  function switchView(v, dir) {
+    if (v === view) return;
+    view = v;
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    const m = document.querySelector("main");
+    m.classList.remove("pop", "slide-r", "slide-l");
+    void m.offsetWidth;
+    m.classList.add(dir === "r" ? "slide-r" : "slide-l");
+  }
+  const mainEl = document.querySelector("main");
+  mainEl.addEventListener("touchstart", e => {
+    if (e.target.closest(".swipe") || blockingUIOpen()) { navStart = null; return; }
+    navStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, { passive: true });
+  mainEl.addEventListener("touchend", e => {
+    if (!navStart) return;
+    const dx = e.changedTouches[0].clientX - navStart.x;
+    const dy = e.changedTouches[0].clientY - navStart.y;
+    navStart = null;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const idx = TAB_ORDER.indexOf(view);
+    const next = dx < 0 ? idx + 1 : idx - 1;
+    if (next < 0 || next >= TAB_ORDER.length) return;
+    switchView(TAB_ORDER[next], dx < 0 ? "r" : "l");
+  }, { passive: true });
+
+  document.getElementById("comingOk").onclick = hideComing;
+  document.getElementById("modalBg").onclick = hideComing;
+
+  function setLanguage(value) {
+    lang = value;
+    localStorage.setItem(LANG_KEY, value);
+    applyStatic();
+    render();
+    refreshLockStatus();
+    if (detailId) showDetail(detailId);
+  }
+
+  applyStatic();
+
+  document.getElementById("addBtn").onclick = () => openEdit();
+  document.getElementById("fSave").onclick = saveEdit;
+  document.getElementById("fCancel").onclick = closeAll;
+  document.getElementById("fName").addEventListener("input", () => {
+    const sv = document.getElementById("fSave");
+    delete sv.dataset.dupOk;
+    sv.textContent = t("save");
+    document.getElementById("dupWarn").style.display = "none";
+  });
+  document.getElementById("fClearDate").onclick = () => { document.getElementById("fDate").value = ""; };
+  document.getElementById("fDelete").onclick = () => deleteItem(editingId);
+  document.getElementById("overlay").onclick = closeAll;
+  document.getElementById("gearBtn").onclick = () => { refreshLockStatus(); openSheet("settingsSheet"); };
+  document.getElementById("closeSettings").onclick = closeAll;
+  document.getElementById("settingsBack").onclick = closeAll;
+  document.getElementById("addPersonBtn").onclick = () => {
+    closeAll();
+    openEdit();
+  };
+  document.getElementById("peopleBtn").onclick = () => {
+    closeAll();
+    selectedPerson = null;
+    renderPeople();
+    openSheet("peopleSheet");
+  };
+  document.getElementById("photoBtn").onclick = () => document.getElementById("photoFile").click();
+  document.getElementById("photoFile").onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, 1280 / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * s);
+      c.height = Math.round(img.height * s);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      try {
+        localStorage.setItem(PHOTO_KEY, c.toDataURL("image/jpeg", 0.85));
+        localStorage.setItem(BG_KEY, "photo");
+        applyBackground();
+        renderBgs();
+        toast(t("photoSaved"));
+      } catch {
+        toast(t("fileBad"));
+      }
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+    e.target.value = "";
+  };
+  document.getElementById("bgBtn").onclick = () => {
+    closeAll();
+    renderBgs();
+    openSheet("backgroundSheet");
+  };
+  document.getElementById("bgBack").onclick = () => {
+    closeAll();
+    openSheet("appearanceSheet");
+  };
+  document.getElementById("bgGrid").onclick = e => {
+    const b = e.target.closest("[data-bg]");
+    if (!b) return;
+    localStorage.setItem(BG_KEY, b.dataset.bg);
+    applyBackground();
+    renderBgs();
+  };
+  document.getElementById("resetBgBtn").onclick = () => {
+    localStorage.removeItem(BG_KEY);
+    localStorage.removeItem(PHOTO_KEY);
+    localStorage.removeItem(SLIDE_KEY);
+    startSlideshow();
+    applyBackground();
+    refreshAppearance();
+    toast(t("photoReset"));
+  };
+  document.getElementById("slideToggle").onchange = e => {
+    localStorage.setItem(SLIDE_KEY, e.target.checked ? "on" : "off");
+    if (e.target.checked && !localStorage.getItem(BG_KEY)) localStorage.setItem(BG_KEY, bgOptions()[0]);
+    applyBackground();
+    startSlideshow();
+    refreshAppearance();
+  };
+  document.getElementById("themeBtn").onclick = () => {
+    closeAll();
+    renderThemes();
+    openSheet("themeSheet");
+  };
+  document.getElementById("themeBack").onclick = () => {
+    closeAll();
+    openSheet("appearanceSheet");
+  };
+  document.getElementById("fontBtn").onclick = () => {
+    closeAll();
+    renderFontList();
+    openSheet("fontSheet");
+  };
+  document.getElementById("fontBack").onclick = () => {
+    closeAll();
+    openSheet("appearanceSheet");
+  };
+  document.getElementById("appearanceBtn").onclick = () => {
+    closeAll();
+    renderAppearance();
+    openSheet("appearanceSheet");
+  };
+  document.getElementById("appBack").onclick = () => {
+    closeAll();
+    openSheet("settingsSheet");
+  };
+  document.getElementById("themeGrid").onclick = e => {
+    const b = e.target.closest("[data-theme]");
+    if (!b) return;
+    localStorage.setItem(THEME_KEY, b.dataset.theme);
+    applyAppearance();
+    renderAppearance();
+  };
+  document.getElementById("fontList").onclick = e => {
+    const b = e.target.closest("[data-font]");
+    if (!b) return;
+    localStorage.setItem(FONT_KEY, b.dataset.font);
+    applyAppearance();
+    renderAppearance();
+  };
+  document.getElementById("peopleBack").onclick = () => {
+    if (selectedPerson) {
+      selectedPerson = null;
+      renderPeople();
+    } else {
+      closeAll();
+      openSheet("settingsSheet");
+    }
+  };
+  document.getElementById("exportBtn").onclick = exportData;
+  document.getElementById("importBtn").onclick = () => document.getElementById("importFile").click();
+  document.getElementById("importFile").onchange = e => e.target.files[0] && importData(e.target.files[0]);
+  document.getElementById("notifyToggle").onchange = async e => {
+    if (e.target.checked) {
+      localStorage.removeItem(NOTIFY_OFF);
+      await enableNotifications();
+    } else {
+      localStorage.setItem(NOTIFY_OFF, "1");
+    }
+    refreshLockStatus();
+  };
+  document.getElementById("pwToggle").onchange = togglePassword;
+  document.getElementById("pwNew").oninput = trySavePassword;
+  document.getElementById("pwConfirm").oninput = trySavePassword;
+  document.getElementById("bioToggle").onchange = async e => {
+    if (e.target.checked) await enableBio();
+    else disableBio();
+    refreshLockStatus();
+  };
+  document.getElementById("autoLock").onchange = e => localStorage.setItem(AL_KEY, e.target.value);
+  document.getElementById("langSelect").onchange = e => setLanguage(e.target.value);
+
+  document.querySelectorAll(".tab").forEach(btn => btn.onclick = () => {
+    view = btn.dataset.view;
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  document.getElementById("view").onclick = e => {
+    const dot = e.target.closest("[data-fact]");
+    if (dot) { factIdx = parseInt(dot.dataset.fact, 10); renderFact(); return; }
+    const edit = e.target.closest(".sw-edit");
+    if (edit) return openEdit(edit.dataset.id);
+    const del = e.target.closest(".sw-del");
+    if (del) return swipeDelete(del);
+    const swipe = e.target.closest(".swipe");
+    if (swipe && swipe.classList.contains("open")) { swipe.classList.remove("open"); return; }
+    const row = e.target.closest(".entry");
+    if (row) showDetail(row.dataset.id);
+  };
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeAll();
+  });
+
+  document.getElementById("aboutBtn").onclick = () => {
+    closeAll();
+    document.getElementById("aboutPage").classList.add("open");
+  };
+  document.getElementById("aboutBack").onclick = () => {
+    document.getElementById("aboutPage").classList.remove("open");
+  };
+  document.getElementById("websiteBtn").onclick = () => {
+    showComing();
+  };
+  document.getElementById("privacyBtn").onclick = () => openSheet("privacySheet");
+  document.getElementById("privacyClose").onclick = closeAll;
+
+  async function startup() {
+    const main = document.querySelector("main");
+    const locked = !!localStorage.getItem(PW_KEY) || !!localStorage.getItem(BIO_KEY);
+    [applyAppearance, applyBackground, organizeGeneral, startSlideshow, render].forEach(fn => {
+      try { fn(); } catch (err) { console.error(err); }
+    });
+    if (locked) {
+      main.style.opacity = "0";
+      try { await showLock(); } catch (err) { console.error(err); }
+      main.style.opacity = "";
+    }
+    main.classList.remove("pop");
+    void main.offsetWidth;
+    main.classList.add("pop");
+    checkNotifications();
+  }
+  startup();
+</script>
+</body>
+</html>
