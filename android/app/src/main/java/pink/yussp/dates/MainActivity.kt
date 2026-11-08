@@ -271,7 +271,9 @@ fun DatesRoot(activity: AppCompatActivity) {
     var pendingImport by remember { mutableStateOf<List<Entry>?>(null) }
     var pendingDeletePerson by remember { mutableStateOf<String?>(null) }
     val whatsNew = remember {
-        runCatching { ctx.assets.open("whats-new.txt").bufferedReader().use { it.readText() } }.getOrDefault("")
+        // whats-new.txt holds one "## <version>" section per release; only the newest is shown.
+        val text = runCatching { ctx.assets.open("whats-new.txt").bufferedReader().use { it.readText() } }.getOrDefault("")
+        text.substringAfter("## ", "").substringAfter('\n', "").substringBefore("\n## ").trim()
     }
     val p = remember(themeKey) { paletteFor(themeKey) }
     val today = remember { LocalDate.now() }
