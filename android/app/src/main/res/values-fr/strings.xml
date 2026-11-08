@@ -87,8 +87,9 @@
     <string name="lock_need_device">Activez d’abord un code ou une empreinte sur votre téléphone.</string>
     <string name="lock_prompt_title">Déverrouiller Dates</string>
     <string name="lock_prompt_sub">Utilisez votre empreinte ou le code de l’écran</string>
-    <string name="built_with">Créé avec ❤ par Aymand</string>
+    <string name="built_with">Créé avec ❤ par aym</string>
     <string name="filter_all">Tout</string>
     <string name="filter_birthdays">Anniversaires</string>
     <string name="filter_anniversaries">Dates de couple</string>
+    <string name="created_by">Créé par aym</string>
 </resources>

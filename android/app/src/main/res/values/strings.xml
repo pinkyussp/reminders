@@ -87,8 +87,9 @@
     <string name="lock_need_device">Set a screen lock or fingerprint on your phone first.</string>
     <string name="lock_prompt_title">Unlock Dates</string>
     <string name="lock_prompt_sub">Use your fingerprint or screen lock</string>
-    <string name="built_with">Built with ❤ by Aymand</string>
+    <string name="built_with">Built with ❤ by aym</string>
     <string name="filter_all">All</string>
     <string name="filter_birthdays">Birthdays</string>
     <string name="filter_anniversaries">Anniversaries</string>
+    <string name="created_by">Created by aym</string>
 </resources>

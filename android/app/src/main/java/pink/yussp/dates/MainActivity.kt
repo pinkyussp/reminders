@@ -18,19 +18,22 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -270,8 +273,8 @@ fun DatesRoot(activity: AppCompatActivity) {
     val whatsNew = remember {
         runCatching { ctx.assets.open("whats-new.txt").bufferedReader().use { it.readText() } }.getOrDefault("")
     }
-    val p = paletteFor(themeKey)
-    val today = LocalDate.now()
+    val p = remember(themeKey) { paletteFor(themeKey) }
+    val today = remember { LocalDate.now() }
     val currentLang = AppCompatDelegate.getApplicationLocales().toLanguageTags().substringBefore('-')
         .ifEmpty { Locale.getDefault().language }
         .let { if (it in LANG_TAGS) it else "en" }
@@ -506,6 +509,12 @@ fun DatesRoot(activity: AppCompatActivity) {
                                 ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(WEBSITE_URL)))
                             }
                             Text(
+                                stringResource(R.string.created_by),
+                                color = p.muted,
+                                fontSize = 14.sp,
+                                modifier = Modifier.padding(top = 12.dp)
+                            )
+                            Text(
                                 stringResource(R.string.version_text, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
                                 color = p.muted,
                                 fontSize = 14.sp,
@@ -562,13 +571,39 @@ fun LockScreen(p: Palette, onUnlock: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("🔒", fontSize = 40.sp)
-        Spacer(Modifier.height(12.dp))
+        LockIcon(p.accent, 56.dp)
+        Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.lock_title), color = p.ink, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(20.dp))
         Button(onClick = onUnlock, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.unlock)) }
     }
 }
+
+@Composable
+fun LockIcon(color: UiColor, size: Dp) {
+    Canvas(Modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        drawArc(
+            color = color,
+            startAngle = 180f,
+            sweepAngle = 180f,
+            useCenter = false,
+            topLeft = Offset(w * 0.28f, h * 0.08f),
+            size = Size(w * 0.44f, h * 0.52f),
+            style = Stroke(width = w * 0.09f, cap = StrokeCap.Round)
+        )
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(w * 0.18f, h * 0.44f),
+            size = Size(w * 0.64f, h * 0.48f),
+            cornerRadius = CornerRadius(w * 0.12f)
+        )
+    }
+}
+
+fun sortByDays(list: List<Entry>, today: LocalDate): List<Entry> =
+    list.map { it to it.daysUntil(today) }.sortedBy { it.second }.map { it.first }
 
 @Composable
 fun TabBar(p: Palette, selected: Int, onSelect: (Int) -> Unit, onSettings: () -> Unit, modifier: Modifier) {
@@ -607,19 +642,17 @@ fun TabBar(p: Palette, selected: Int, onSelect: (Int) -> Unit, onSettings: () ->
 
 @Composable
 fun TabItem(label: String, active: Boolean, p: Palette, modifier: Modifier, onClick: () -> Unit) {
-    val bg by animateColorAsState(if (active) p.accent else UiColor.Transparent, animationSpec = tween(250), label = "tabbg")
-    val fg by animateColorAsState(if (active) UiColor.White else p.ink, animationSpec = tween(250), label = "tabfg")
     Box(
         modifier
             .clip(RoundedCornerShape(50))
-            .background(bg)
+            .background(if (active) p.accent else UiColor.Transparent)
             .clickable { onClick() }
             .padding(vertical = 13.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             label,
-            color = fg,
+            color = if (active) UiColor.White else p.ink,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
@@ -676,22 +709,16 @@ fun EmptyState(p: Palette) {
 fun Hero(e: Entry, p: Palette, today: LocalDate, onClick: () -> Unit) {
     val ctx = LocalContext.current
     val days = e.daysUntil(today)
-    val src = remember { MutableInteractionSource() }
-    val pressed by src.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.98f else 1f, label = "hero")
     Column(
         Modifier
             .fillMaxWidth()
-            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(RoundedCornerShape(24.dp))
             .background(p.accent)
-            .clickable(interactionSource = src, indication = null) { onClick() }
+            .clickable { onClick() }
             .padding(20.dp)
     ) {
         Text(stringResource(R.string.next_up), color = UiColor(0xFFFFF9F4), fontSize = 13.sp)
-        AnimatedContent(targetState = countdown(days, ctx), label = "countdown") { text ->
-            Text(text, color = UiColor.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
-        }
+        Text(countdown(days, ctx), color = UiColor.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
         Text("${e.name} · ${typeLabel(e, ctx)}", color = UiColor(0xFFFFF1EA), fontSize = 14.sp)
     }
 }
@@ -703,19 +730,14 @@ fun EntryRow(e: Entry, p: Palette, today: LocalDate, modifier: Modifier = Modifi
     val days = e.daysUntil(today)
     val isToday = days == 0L
     val shape = RoundedCornerShape(20.dp)
-    val src = remember { MutableInteractionSource() }
-    val pressed by src.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.97f else 1f, label = "row")
-    val bg by animateColorAsState(if (isToday) p.today else p.card, animationSpec = tween(300), label = "rowbg")
     Row(
         modifier
             .fillMaxWidth()
             .padding(bottom = 10.dp)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(shape)
-            .background(bg)
+            .background(if (isToday) p.today else p.card)
             .then(if (isToday) Modifier.border(1.5.dp, p.accent, shape) else Modifier)
-            .clickable(interactionSource = src, indication = null) { onClick() }
+            .clickable { onClick() }
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -736,21 +758,8 @@ fun EntryRow(e: Entry, p: Palette, today: LocalDate, modifier: Modifier = Modifi
             Text(next.dayOfMonth.toString(), color = UiColor.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
         Column(Modifier.weight(1f)) {
-            Text(
-                e.name,
-                color = p.ink,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                metaLine(e, today, ctx),
-                color = p.muted,
-                fontSize = 13.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Text(e.name, color = p.ink, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(metaLine(e, today, ctx), color = p.muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Text(
             countdown(days, ctx),
@@ -765,7 +774,10 @@ fun EntryRow(e: Entry, p: Palette, today: LocalDate, modifier: Modifier = Modifi
 @Composable
 fun OverviewPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Unit, onOpen: (Entry) -> Unit) {
     var kind by remember { mutableStateOf("all") }
-    val sorted = all.filter { kind == "all" || it.type == kind }.sortedBy { it.daysUntil(today) }
+    val sorted = remember(all, kind, today) { sortByDays(all.filter { kind == "all" || it.type == kind }, today) }
+    val next = sorted.firstOrNull()
+    val soon = remember(sorted, today) { sorted.drop(1).filter { it.daysUntil(today) <= 30 } }
+    val later = remember(sorted, today) { sorted.filter { it.daysUntil(today) > 30 } }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp)
@@ -784,31 +796,22 @@ fun OverviewPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Un
                 }
             }
         }
-        if (sorted.isEmpty()) {
+        if (next == null) {
             item { EmptyState(p) }
         } else {
-            val next = sorted.first()
             item {
                 Column {
-                    Crossfade(targetState = next, label = "hero") { e ->
-                        Hero(e, p, today) { onOpen(e) }
-                    }
+                    Hero(next, p, today) { onOpen(next) }
                     Spacer(Modifier.height(14.dp))
                 }
             }
-            val soon = sorted.filter { it.id != next.id && it.daysUntil(today) <= 30 }
-            val later = sorted.filter { it.daysUntil(today) > 30 }
             if (soon.isNotEmpty()) {
                 item { SectionLabel(stringResource(R.string.section_coming_up), p) }
-                items(soon, key = { it.id }) { e ->
-                    EntryRow(e, p, today, Modifier) { onOpen(e) }
-                }
+                items(soon, key = { it.id }) { e -> EntryRow(e, p, today) { onOpen(e) } }
             }
             if (later.isNotEmpty()) {
                 item { SectionLabel(stringResource(R.string.section_later), p) }
-                items(later, key = { it.id }) { e ->
-                    EntryRow(e, p, today, Modifier) { onOpen(e) }
-                }
+                items(later, key = { it.id }) { e -> EntryRow(e, p, today) { onOpen(e) } }
             }
         }
     }
@@ -816,7 +819,7 @@ fun OverviewPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Un
 
 @Composable
 fun DatesPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Unit, onOpen: (Entry) -> Unit) {
-    val sorted = all.sortedBy { it.daysUntil(today) }
+    val sorted = remember(all, today) { sortByDays(all, today) }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp)
@@ -826,9 +829,7 @@ fun DatesPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Unit,
             item { EmptyState(p) }
         } else {
             item { SectionLabel(stringResource(R.string.section_all), p) }
-            items(sorted, key = { it.id }) { e ->
-                EntryRow(e, p, today, Modifier) { onOpen(e) }
-            }
+            items(sorted, key = { it.id }) { e -> EntryRow(e, p, today) { onOpen(e) } }
         }
     }
 }

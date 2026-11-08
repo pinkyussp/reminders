@@ -87,8 +87,9 @@
     <string name="lock_need_device">Richte zuerst eine Display-Sperre oder einen Fingerabdruck auf deinem Telefon ein.</string>
     <string name="lock_prompt_title">Dates entsperren</string>
     <string name="lock_prompt_sub">Fingerabdruck oder Display-Sperre verwenden</string>
-    <string name="built_with">Gemacht mit ❤ von Aymand</string>
+    <string name="built_with">Gemacht mit ❤ von aym</string>
     <string name="filter_all">Alle</string>
     <string name="filter_birthdays">Geburtstage</string>
     <string name="filter_anniversaries">Jahrestage</string>
+    <string name="created_by">Erstellt von aym</string>
 </resources>
