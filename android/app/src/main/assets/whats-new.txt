@@ -1,0 +1,6 @@
+The first Android version of Dates.
+
+- Birthdays and anniversaries, with reminders before each one
+- Six colour themes that match the web app
+- Backup and restore, in the same file format as the web app
+- Version and "What's new" in Settings
