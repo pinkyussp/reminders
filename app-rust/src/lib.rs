@@ -310,12 +310,16 @@ impl eframe::App for DatesApp {
 
 #[cfg(target_os = "android")]
 #[no_mangle]
-fn android_main(app: eframe::AndroidApp) {
+fn android_main(app: winit::platform::android::activity::AndroidApp) {
+    use winit::platform::android::EventLoopBuilderExtAndroid;
+
     if let Some(dir) = app.internal_data_path() {
         let _ = DATA_DIR.set(dir);
     }
     let mut options = eframe::NativeOptions::default();
-    options.android_app = Some(app);
+    options.event_loop_builder = Some(Box::new(move |builder| {
+        builder.with_android_app(app);
+    }));
     let items = load_items();
     eframe::run_native(
         "Dates",
