@@ -1,3 +1,5 @@
+[![Android build](https://github.com/pinkyussp/reminders/actions/workflows/android-build.yml/badge.svg)](https://github.com/pinkyussp/reminders/actions/workflows/android-build.yml)
+
 # Dates for Android
 
 Birthday and anniversary reminders. The same app as the web version, built as a native Android app.
