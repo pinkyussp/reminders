@@ -10,7 +10,7 @@ android {
         applicationId = "pink.yussp.dates"
         minSdk = 26
         targetSdk = 34
-        versionCode = (System.getenv("VERSION_CODE") ?: "1001").toInt()
+        versionCode = 1000 + (System.getenv("VERSION_CODE") ?: "1").toInt()
         versionName = System.getenv("VERSION_NAME") ?: "2.0.0-dev"
         ndk {
             abiFilters += listOf("arm64-v8a")
