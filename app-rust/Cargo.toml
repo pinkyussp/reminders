@@ -8,7 +8,7 @@ build = "build.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-slint = { version = "=1.12.1", default-features = false, features = ["backend-android-activity-06", "renderer-software", "compat-1-2"] }
+slint = { version = "=1.12.1", default-features = false, features = ["backend-android-activity-06", "renderer-software", "compat-1-2", "std"] }
 
 [build-dependencies]
 slint-build = "=1.12.1"
