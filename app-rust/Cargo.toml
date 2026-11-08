@@ -1,0 +1,14 @@
+[package]
+name = "dates"
+version = "2.0.0"
+edition = "2021"
+build = "build.rs"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+slint = { version = "1.12", default-features = false, features = ["backend-android-activity-06", "renderer-software"] }
+
+[build-dependencies]
+slint-build = "1.12"
