@@ -319,7 +319,7 @@ fun DatesRoot(activity: AppCompatActivity) {
         Reminders.channel(ctx)
         Reminders.schedule(ctx)
         val lastSeen = prefs.getInt("last_seen", 0)
-        if (lastSeen == 0) {
+        if (lastSeen == 0 && entries.isEmpty()) {
             prefs.edit().putInt("last_seen", BuildConfig.VERSION_CODE).apply()
         } else if (lastSeen < BuildConfig.VERSION_CODE) {
             whatsNewOpen = true

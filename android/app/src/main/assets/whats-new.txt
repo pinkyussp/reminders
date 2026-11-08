@@ -1,6 +1,13 @@
-The first Android version of Dates.
+The app now looks and works like the web app.
 
-- Birthdays and anniversaries, with reminders before each one
-- Six colour themes that match the web app
-- Backup and restore, in the same file format as the web app
-- Version and "What's new" in Settings
+- Bottom tab bar with Overview, Dates and Calendar, and swipe between them
+- Hero card for your next date, with colourful date badges
+- Filter the overview to All, Birthdays or Anniversaries
+- Six colour themes
+- App lock with your fingerprint or screen lock
+- People: manage everyone and their dates in Settings
+- About: privacy policy, website and version
+- Five languages: English, Français, Español, Deutsch and Português
+- Smooth animations between screens
+- Backup and restore in the same format as the web app
+- Daily reminders before each date
