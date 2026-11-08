@@ -88,4 +88,7 @@
     <string name="lock_prompt_title">Dates entsperren</string>
     <string name="lock_prompt_sub">Fingerabdruck oder Display-Sperre verwenden</string>
     <string name="built_with">Gemacht mit ❤ von Aymand</string>
+    <string name="filter_all">Alle</string>
+    <string name="filter_birthdays">Geburtstage</string>
+    <string name="filter_anniversaries">Jahrestage</string>
 </resources>

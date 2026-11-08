@@ -88,4 +88,7 @@
     <string name="lock_prompt_title">Desbloquear Dates</string>
     <string name="lock_prompt_sub">Use sua digital ou o bloqueio de tela</string>
     <string name="built_with">Feito com ❤ por Aymand</string>
+    <string name="filter_all">Todos</string>
+    <string name="filter_birthdays">Aniversários</string>
+    <string name="filter_anniversaries">Aniversários de casal</string>
 </resources>

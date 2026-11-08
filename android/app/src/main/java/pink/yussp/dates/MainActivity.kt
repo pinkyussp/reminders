@@ -765,12 +765,26 @@ fun EntryRow(e: Entry, p: Palette, today: LocalDate, modifier: Modifier = Modifi
 
 @Composable
 fun OverviewPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Unit, onOpen: (Entry) -> Unit) {
-    val sorted = all.sortedBy { it.daysUntil(today) }
+    var kind by remember { mutableStateOf("all") }
+    val sorted = all.filter { kind == "all" || it.type == kind }.sortedBy { it.daysUntil(today) }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp)
     ) {
         item { Header(p, onAdd) }
+        item {
+            Column(Modifier.padding(bottom = 6.dp)) {
+                ChipRow {
+                    listOf(
+                        "all" to R.string.filter_all,
+                        "birthday" to R.string.filter_birthdays,
+                        "anniversary" to R.string.filter_anniversaries
+                    ).forEach { (k, id) ->
+                        FilterChip(selected = kind == k, onClick = { kind = k }, label = { Text(stringResource(id)) })
+                    }
+                }
+            }
+        }
         if (sorted.isEmpty()) {
             item { EmptyState(p) }
         } else {

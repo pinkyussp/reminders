@@ -88,4 +88,7 @@
     <string name="lock_prompt_title">Unlock Dates</string>
     <string name="lock_prompt_sub">Use your fingerprint or screen lock</string>
     <string name="built_with">Built with ❤ by Aymand</string>
+    <string name="filter_all">All</string>
+    <string name="filter_birthdays">Birthdays</string>
+    <string name="filter_anniversaries">Anniversaries</string>
 </resources>

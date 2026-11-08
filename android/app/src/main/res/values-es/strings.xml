@@ -88,4 +88,7 @@
     <string name="lock_prompt_title">Desbloquear Dates</string>
     <string name="lock_prompt_sub">Usa tu huella o el bloqueo de pantalla</string>
     <string name="built_with">Hecho con ❤ por Aymand</string>
+    <string name="filter_all">Todo</string>
+    <string name="filter_birthdays">Cumpleaños</string>
+    <string name="filter_anniversaries">Aniversarios</string>
 </resources>
