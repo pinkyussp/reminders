@@ -24,7 +24,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.animateColorAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -50,7 +50,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.animateItemPlacement
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -802,13 +801,13 @@ fun OverviewPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Un
             if (soon.isNotEmpty()) {
                 item { SectionLabel(stringResource(R.string.section_coming_up), p) }
                 items(soon, key = { it.id }) { e ->
-                    EntryRow(e, p, today, Modifier.animateItemPlacement()) { onOpen(e) }
+                    EntryRow(e, p, today, Modifier) { onOpen(e) }
                 }
             }
             if (later.isNotEmpty()) {
                 item { SectionLabel(stringResource(R.string.section_later), p) }
                 items(later, key = { it.id }) { e ->
-                    EntryRow(e, p, today, Modifier.animateItemPlacement()) { onOpen(e) }
+                    EntryRow(e, p, today, Modifier) { onOpen(e) }
                 }
             }
         }
@@ -828,7 +827,7 @@ fun DatesPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Unit,
         } else {
             item { SectionLabel(stringResource(R.string.section_all), p) }
             items(sorted, key = { it.id }) { e ->
-                EntryRow(e, p, today, Modifier.animateItemPlacement()) { onOpen(e) }
+                EntryRow(e, p, today, Modifier) { onOpen(e) }
             }
         }
     }
