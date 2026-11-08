@@ -6,6 +6,8 @@ Birthday and anniversary reminders. The same app as the web version, built as a 
 
 ## Install
 
+Releases are built automatically by GitHub Actions.
+
 1. Open the latest release on GitHub and download `Dates-1.0.N.apk`.
 2. Open the file on your phone and allow installs from that source if asked.
 3. Install. Later releases install over this one and keep your dates.
