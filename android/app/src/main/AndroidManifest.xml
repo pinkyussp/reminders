@@ -7,6 +7,7 @@
         android:label="Dates"
         android:icon="@mipmap/ic_launcher"
         android:supportsRtl="true"
+        android:localeConfig="@xml/locales_config"
         android:theme="@style/Theme.Dates">
         <activity
             android:name=".MainActivity"

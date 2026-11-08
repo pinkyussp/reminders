@@ -3,31 +3,54 @@
 package pink.yussp.dates
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.animateItemPlacement
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -37,6 +60,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,14 +69,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,43 +87,83 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color as UiColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.os.LocaleListCompat
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.util.Locale
 import java.util.UUID
 
-class MainActivity : ComponentActivity() {
+val LOCK_AUTHENTICATORS: Int =
+    BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+val LANG_TAGS = listOf("en", "fr", "es", "de", "pt")
+val LANG_NAMES = listOf("English", "Français", "Español", "Deutsch", "Português")
+const val WEBSITE_URL = "https://dates.yussp.pink"
+
+object LockState {
+    var started = false
+    var locked by mutableStateOf(false)
+    var ignoreNextStop = false
+}
+
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { DatesRoot() }
+        if (!LockState.started) {
+            LockState.started = true
+            if (Store.prefs(this).getBoolean("lock_enabled", false)) LockState.locked = true
+        }
+        setContent { DatesRoot(this) }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (LockState.ignoreNextStop) {
+            LockState.ignoreNextStop = false
+        } else if (Store.prefs(this).getBoolean("lock_enabled", false)) {
+            LockState.locked = true
+        }
     }
 }
 
 data class Palette(
-    val bg: Color,
-    val card: Color,
-    val ink: Color,
-    val muted: Color,
-    val accent: Color,
-    val highlight: Color,
-    val line: Color,
-    val today: Color
+    val bg: UiColor,
+    val card: UiColor,
+    val ink: UiColor,
+    val muted: UiColor,
+    val accent: UiColor,
+    val highlight: UiColor,
+    val line: UiColor,
+    val today: UiColor
 )
 
-private fun c(v: Long): Color = Color(0xFF000000L or v)
+private fun c(v: Long): UiColor = UiColor(0xFF000000L or v)
 
 val THEME_KEYS = listOf("cream", "wine", "midnight", "forest", "lavender", "noir")
-val THEME_LABELS = listOf("Cream", "Wine", "Midnight", "Forest", "Lavender", "Noir")
+
+fun themeNameRes(key: String): Int = when (key) {
+    "wine" -> R.string.theme_wine
+    "midnight" -> R.string.theme_midnight
+    "forest" -> R.string.theme_forest
+    "lavender" -> R.string.theme_lavender
+    "noir" -> R.string.theme_noir
+    else -> R.string.theme_cream
+}
 
 fun paletteFor(key: String): Palette = when (key) {
     "wine" -> Palette(c(0x1a1214), c(0x2a1f22), c(0xffffff), c(0xb59ea3), c(0x8b1e33), c(0xe8a2ab), c(0x3a2d30), c(0x4a1d26))
@@ -115,7 +179,7 @@ fun schemeFor(p: Palette): ColorScheme {
     val base = if (brightness < 0.5f) darkColorScheme() else lightColorScheme()
     return base.copy(
         primary = p.accent,
-        onPrimary = Color.White,
+        onPrimary = UiColor.White,
         background = p.bg,
         onBackground = p.ink,
         surface = p.card,
@@ -127,31 +191,30 @@ fun schemeFor(p: Palette): ColorScheme {
     )
 }
 
-fun countdown(days: Long): String = when (days) {
-    0L -> "Today"
-    1L -> "Tomorrow"
-    else -> "in $days days"
+fun countdown(days: Long, ctx: Context): String = when (days) {
+    0L -> ctx.getString(R.string.countdown_today)
+    1L -> ctx.getString(R.string.countdown_tomorrow)
+    else -> ctx.getString(R.string.countdown_in, days)
 }
 
-fun remindLabel(days: Int): String = when (days) {
-    0 -> "On the day"
-    1 -> "1 day"
-    else -> "$days days"
-}
+fun remindLabel(days: Int, ctx: Context): String =
+    if (days == 0) ctx.getString(R.string.on_day)
+    else ctx.resources.getQuantityString(R.plurals.remind_days, days, days)
 
-fun typeLabel(e: Entry): String = if (e.type == "anniversary") "Anniversary" else "Birthday"
+fun typeLabel(e: Entry, ctx: Context): String =
+    ctx.getString(if (e.type == "anniversary") R.string.type_anniversary else R.string.type_birthday)
 
-fun ageText(e: Entry, today: LocalDate): String {
+fun ageText(e: Entry, today: LocalDate, ctx: Context): String {
     val years = e.yearsAt(today)
     return if (e.type == "anniversary") {
-        "$years yr${if (years == 1) "" else "s"}"
+        ctx.resources.getQuantityString(R.plurals.age_years, years, years)
     } else {
-        "turns $years"
+        ctx.getString(R.string.age_turns, years)
     }
 }
 
-fun metaLine(e: Entry, today: LocalDate): String =
-    listOf(e.rel.takeIf { it.isNotBlank() }, typeLabel(e), ageText(e, today)).filterNotNull().joinToString(" · ")
+fun metaLine(e: Entry, today: LocalDate, ctx: Context): String =
+    listOfNotNull(e.rel.takeIf { it.isNotBlank() }, typeLabel(e, ctx), ageText(e, today, ctx)).joinToString(" · ")
 
 fun prettyDate(iso: String): String =
     LocalDate.parse(iso).format(DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault()))
@@ -161,34 +224,66 @@ fun matchesDay(e: Entry, day: LocalDate): Boolean {
     return base.monthValue == day.monthValue && base.dayOfMonth == day.dayOfMonth
 }
 
+fun canUseLock(ctx: Context): Boolean =
+    BiometricManager.from(ctx).canAuthenticate(LOCK_AUTHENTICATORS) == BiometricManager.BIOMETRIC_SUCCESS
+
+fun promptUnlock(activity: AppCompatActivity) {
+    val prompt = BiometricPrompt(
+        activity,
+        ContextCompat.getMainExecutor(activity),
+        object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                LockState.locked = false
+            }
+        }
+    )
+    prompt.authenticate(
+        BiometricPrompt.PromptInfo.Builder()
+            .setTitle(activity.getString(R.string.lock_prompt_title))
+            .setSubtitle(activity.getString(R.string.lock_prompt_sub))
+            .setAllowedAuthenticators(LOCK_AUTHENTICATORS)
+            .build()
+    )
+}
+
+enum class SettingsPage { Main, People }
+
 @Composable
-fun DatesRoot() {
+fun DatesRoot(activity: AppCompatActivity) {
     val ctx = LocalContext.current
     val prefs = remember { Store.prefs(ctx) }
     val scope = rememberCoroutineScope()
     var themeKey by remember { mutableStateOf(prefs.getString("theme", "cream") ?: "cream") }
     var defaultRemind by remember { mutableStateOf(prefs.getInt("default_remind", 3)) }
     var defaultView by remember { mutableStateOf(prefs.getInt("default_view", 0)) }
+    var lockOn by remember { mutableStateOf(prefs.getBoolean("lock_enabled", false)) }
     var entries by remember { mutableStateOf<List<Entry>>(Store.load(ctx)) }
     val pagerState = rememberPagerState(initialPage = defaultView, pageCount = { 3 })
     var settingsOpen by remember { mutableStateOf(false) }
+    var settingsPage by remember { mutableStateOf(SettingsPage.Main) }
     var sheetOpen by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Entry?>(null) }
     var whatsNewOpen by remember { mutableStateOf(false) }
+    var aboutOpen by remember { mutableStateOf(false) }
+    var privacyOpen by remember { mutableStateOf(false) }
     var pendingImport by remember { mutableStateOf<List<Entry>?>(null) }
+    var pendingDeletePerson by remember { mutableStateOf<String?>(null) }
     val whatsNew = remember {
         runCatching { ctx.assets.open("whats-new.txt").bufferedReader().use { it.readText() } }.getOrDefault("")
     }
     val p = paletteFor(themeKey)
     val today = LocalDate.now()
+    val currentLang = AppCompatDelegate.getApplicationLocales().toLanguageTags().substringBefore('-')
+        .ifEmpty { Locale.getDefault().language }
+        .let { if (it in LANG_TAGS) it else "en" }
 
     fun persist(list: List<Entry>) {
         entries = list
         Store.save(ctx, list)
     }
 
-    fun toast(message: String) {
-        Toast.makeText(ctx, message, Toast.LENGTH_SHORT).show()
+    fun say(text: String) {
+        Toast.makeText(ctx, text, Toast.LENGTH_SHORT).show()
     }
 
     fun closeWhatsNew() {
@@ -206,6 +301,21 @@ fun DatesRoot() {
         sheetOpen = true
     }
 
+    fun setLock(on: Boolean) {
+        if (on && !canUseLock(ctx)) {
+            say(ctx.getString(R.string.lock_need_device))
+            return
+        }
+        lockOn = on
+        prefs.edit().putBoolean("lock_enabled", on).apply()
+    }
+
+    fun setLanguage(tag: String) {
+        if (tag == currentLang) return
+        LockState.ignoreNextStop = true
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
+    }
+
     LaunchedEffect(Unit) {
         Reminders.channel(ctx)
         Reminders.schedule(ctx)
@@ -217,24 +327,30 @@ fun DatesRoot() {
         }
     }
 
+    LaunchedEffect(LockState.locked) {
+        if (LockState.locked) promptUnlock(activity)
+    }
+
     val notifyPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        toast(if (granted) "Notifications are on" else "Notifications are blocked. Allow them in phone settings.")
+        say(ctx.getString(if (granted) R.string.notif_on else R.string.notif_blocked))
     }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) {
-            toast(if (Store.exportTo(ctx, uri, entries)) "Backup saved" else "Couldn't save the backup")
+            say(ctx.getString(if (Store.exportTo(ctx, uri, entries)) R.string.backup_saved else R.string.backup_failed))
         }
     }
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             val list = Store.importFrom(ctx, uri)
-            if (list == null) toast("That file isn't a Dates backup") else pendingImport = list
+            if (list == null) say(ctx.getString(R.string.not_backup_file)) else pendingImport = list
         }
     }
 
-    BackHandler(enabled = settingsOpen) { settingsOpen = false }
+    BackHandler(enabled = settingsOpen) {
+        if (settingsPage != SettingsPage.Main) settingsPage = SettingsPage.Main else settingsOpen = false
+    }
 
     MaterialTheme(colorScheme = schemeFor(p)) {
         Box(Modifier.fillMaxSize().background(p.bg)) {
@@ -250,43 +366,83 @@ fun DatesRoot() {
                 p = p,
                 selected = pagerState.currentPage,
                 onSelect = { i -> scope.launch { pagerState.animateScrollToPage(i) } },
-                onSettings = { settingsOpen = true },
+                onSettings = {
+                    settingsPage = SettingsPage.Main
+                    settingsOpen = true
+                },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
 
-            if (settingsOpen) {
+            AnimatedVisibility(
+                visible = settingsOpen,
+                modifier = Modifier.fillMaxSize(),
+                enter = slideInHorizontally(initialOffsetX = { it / 4 }) + fadeIn(),
+                exit = slideOutHorizontally(targetOffsetX = { it / 4 }) + fadeOut()
+            ) {
                 Surface(modifier = Modifier.fillMaxSize(), color = p.bg) {
-                    SettingsPanel(
-                        p = p,
-                        defaultView = defaultView,
-                        defaultRemind = defaultRemind,
-                        themeKey = themeKey,
-                        versionText = "Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
-                        onBack = { settingsOpen = false },
-                        onView = {
-                            defaultView = it
-                            prefs.edit().putInt("default_view", it).apply()
+                    AnimatedContent(
+                        targetState = settingsPage,
+                        modifier = Modifier.fillMaxSize(),
+                        transitionSpec = {
+                            (slideInHorizontally(initialOffsetX = { it / 3 }) + fadeIn()) togetherWith
+                                (slideOutHorizontally(targetOffsetX = { -it / 3 }) + fadeOut())
                         },
-                        onRemind = {
-                            defaultRemind = it
-                            prefs.edit().putInt("default_remind", it).apply()
-                        },
-                        onTheme = {
-                            themeKey = it
-                            prefs.edit().putString("theme", it).apply()
-                        },
-                        onAllowNotifications = { notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS) },
-                        onTestNotification = {
-                            if (Reminders.canNotify(ctx)) {
-                                Reminders.notify(ctx, "Dates", "Notifications are working.", 1)
-                            } else {
-                                notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }
-                        },
-                        onExport = { exportLauncher.launch("dates-backup.json") },
-                        onImport = { importLauncher.launch(arrayOf("application/json", "*/*")) },
-                        onWhatsNew = { whatsNewOpen = true }
-                    )
+                        label = "settings"
+                    ) { page ->
+                        when (page) {
+                            SettingsPage.Main -> SettingsMain(
+                                p = p,
+                                defaultView = defaultView,
+                                defaultRemind = defaultRemind,
+                                themeKey = themeKey,
+                                lockOn = lockOn,
+                                lang = currentLang,
+                                versionText = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                                onBack = { settingsOpen = false },
+                                onView = {
+                                    defaultView = it
+                                    prefs.edit().putInt("default_view", it).apply()
+                                },
+                                onRemind = {
+                                    defaultRemind = it
+                                    prefs.edit().putInt("default_remind", it).apply()
+                                },
+                                onTheme = {
+                                    themeKey = it
+                                    prefs.edit().putString("theme", it).apply()
+                                },
+                                onLock = { setLock(it) },
+                                onLang = { setLanguage(it) },
+                                onAllowNotifications = { notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS) },
+                                onTestNotification = {
+                                    if (Reminders.canNotify(ctx)) {
+                                        Reminders.notify(ctx, "Dates", ctx.getString(R.string.notif_test_text), 1)
+                                    } else {
+                                        notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                },
+                                onExport = {
+                                    LockState.ignoreNextStop = true
+                                    exportLauncher.launch("dates-backup.json")
+                                },
+                                onImport = {
+                                    LockState.ignoreNextStop = true
+                                    importLauncher.launch(arrayOf("application/json", "*/*"))
+                                },
+                                onPeople = { settingsPage = SettingsPage.People },
+                                onAbout = { aboutOpen = true },
+                                onWhatsNew = { whatsNewOpen = true }
+                            )
+                            SettingsPage.People -> PeoplePage(
+                                all = entries,
+                                p = p,
+                                today = today,
+                                onBack = { settingsPage = SettingsPage.Main },
+                                onOpen = { openEdit(it) },
+                                onDelete = { pendingDeletePerson = it }
+                            )
+                        }
+                    }
                 }
             }
 
@@ -312,34 +468,112 @@ fun DatesRoot() {
             pendingImport?.let { list ->
                 AlertDialog(
                     onDismissRequest = { pendingImport = null },
-                    title = { Text("Replace your dates?") },
-                    text = { Text("This replaces your ${entries.size} current dates with ${list.size} from the backup.") },
+                    title = { Text(stringResource(R.string.replace_title)) },
+                    text = { Text(stringResource(R.string.replace_text)) },
                     confirmButton = {
                         TextButton(onClick = {
                             persist(list)
                             pendingImport = null
-                            toast("Restored ${list.size} dates")
-                        }) { Text("Replace") }
+                            say(ctx.getString(R.string.restored))
+                        }) { Text(stringResource(R.string.replace)) }
                     },
-                    dismissButton = { TextButton(onClick = { pendingImport = null }) { Text("Cancel") } }
+                    dismissButton = { TextButton(onClick = { pendingImport = null }) { Text(stringResource(R.string.cancel)) } }
+                )
+            }
+
+            pendingDeletePerson?.let { name ->
+                AlertDialog(
+                    onDismissRequest = { pendingDeletePerson = null },
+                    title = { Text(stringResource(R.string.delete_person_title, name)) },
+                    text = { Text(stringResource(R.string.delete_person_text)) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            persist(entries.filter { it.name != name })
+                            pendingDeletePerson = null
+                        }) { Text(stringResource(R.string.delete)) }
+                    },
+                    dismissButton = { TextButton(onClick = { pendingDeletePerson = null }) { Text(stringResource(R.string.cancel)) } }
+                )
+            }
+
+            if (aboutOpen) {
+                AlertDialog(
+                    onDismissRequest = { aboutOpen = false },
+                    title = { Text(stringResource(R.string.about_title)) },
+                    text = {
+                        Column {
+                            NavRow(stringResource(R.string.privacy_policy), p) { privacyOpen = true }
+                            NavRow(stringResource(R.string.website), p) {
+                                ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(WEBSITE_URL)))
+                            }
+                            Text(
+                                stringResource(R.string.version_text, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
+                                color = p.muted,
+                                fontSize = 14.sp,
+                                modifier = Modifier.padding(top = 12.dp)
+                            )
+                        }
+                    },
+                    confirmButton = { TextButton(onClick = { aboutOpen = false }) { Text(stringResource(R.string.ok)) } }
+                )
+            }
+
+            if (privacyOpen) {
+                AlertDialog(
+                    onDismissRequest = { privacyOpen = false },
+                    title = { Text(stringResource(R.string.privacy_policy)) },
+                    text = {
+                        Column(Modifier.verticalScroll(rememberScrollState())) {
+                            Text(stringResource(R.string.privacy_text))
+                        }
+                    },
+                    confirmButton = { TextButton(onClick = { privacyOpen = false }) { Text(stringResource(R.string.ok)) } }
                 )
             }
 
             if (whatsNewOpen) {
                 AlertDialog(
                     onDismissRequest = { closeWhatsNew() },
-                    title = { Text("What's new in ${BuildConfig.VERSION_NAME}") },
+                    title = { Text(stringResource(R.string.whats_new_title, BuildConfig.VERSION_NAME)) },
                     text = { Text(whatsNew) },
-                    confirmButton = { TextButton(onClick = { closeWhatsNew() }) { Text("OK") } }
+                    confirmButton = { TextButton(onClick = { closeWhatsNew() }) { Text(stringResource(R.string.ok)) } }
                 )
+            }
+
+            AnimatedVisibility(
+                visible = LockState.locked,
+                modifier = Modifier.fillMaxSize(),
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                LockScreen(p) { promptUnlock(activity) }
             }
         }
     }
 }
 
 @Composable
+fun LockScreen(p: Palette, onUnlock: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(p.bg)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("🔒", fontSize = 40.sp)
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.lock_title), color = p.ink, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(20.dp))
+        Button(onClick = onUnlock, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.unlock)) }
+    }
+}
+
+@Composable
 fun TabBar(p: Palette, selected: Int, onSelect: (Int) -> Unit, onSettings: () -> Unit, modifier: Modifier) {
-    val labels = listOf("Overview", "Dates", "Calendar")
+    val labels = listOf(R.string.tab_overview, R.string.tab_dates, R.string.tab_calendar)
     Row(
         modifier
             .padding(bottom = 22.dp)
@@ -351,26 +585,14 @@ fun TabBar(p: Palette, selected: Int, onSelect: (Int) -> Unit, onSettings: () ->
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        labels.forEachIndexed { i, label ->
-            val active = i == selected
-            Box(
-                Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(50))
-                    .background(if (active) p.accent else Color.Transparent)
-                    .clickable { onSelect(i) }
-                    .padding(vertical = 13.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    label,
-                    color = if (active) Color.White else p.ink,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+        labels.forEachIndexed { i, id ->
+            TabItem(
+                label = stringResource(id),
+                active = i == selected,
+                p = p,
+                modifier = Modifier.weight(1f),
+                onClick = { onSelect(i) }
+            )
         }
         Box(
             Modifier
@@ -379,8 +601,31 @@ fun TabBar(p: Palette, selected: Int, onSelect: (Int) -> Unit, onSettings: () ->
                 .clickable { onSettings() },
             contentAlignment = Alignment.Center
         ) {
-            Text("≡", color = p.ink, fontSize = 24.sp)
+            Text("⚙", color = p.ink, fontSize = 22.sp)
         }
+    }
+}
+
+@Composable
+fun TabItem(label: String, active: Boolean, p: Palette, modifier: Modifier, onClick: () -> Unit) {
+    val bg by animateColorAsState(if (active) p.accent else UiColor.Transparent, animationSpec = tween(250), label = "tabbg")
+    val fg by animateColorAsState(if (active) UiColor.White else p.ink, animationSpec = tween(250), label = "tabfg")
+    Box(
+        modifier
+            .clip(RoundedCornerShape(50))
+            .background(bg)
+            .clickable { onClick() }
+            .padding(vertical = 13.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            label,
+            color = fg,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -393,7 +638,7 @@ fun Header(p: Palette, onAdd: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text("Dates", color = p.ink, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.app_name), color = p.ink, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Box(
             Modifier
                 .size(40.dp)
@@ -402,7 +647,7 @@ fun Header(p: Palette, onAdd: () -> Unit) {
                 .clickable { onAdd() },
             contentAlignment = Alignment.Center
         ) {
-            Text("+", color = Color.White, fontSize = 24.sp)
+            Text("+", color = UiColor.White, fontSize = 24.sp)
         }
     }
 }
@@ -421,7 +666,7 @@ fun SectionLabel(text: String, p: Palette) {
 @Composable
 fun EmptyState(p: Palette) {
     Text(
-        "No dates yet. Tap + to add a birthday or anniversary.",
+        stringResource(R.string.empty_state),
         color = p.muted,
         fontSize = 15.sp,
         modifier = Modifier.padding(vertical = 60.dp, horizontal = 20.dp)
@@ -430,35 +675,49 @@ fun EmptyState(p: Palette) {
 
 @Composable
 fun Hero(e: Entry, p: Palette, today: LocalDate, onClick: () -> Unit) {
+    val ctx = LocalContext.current
     val days = e.daysUntil(today)
+    val src = remember { MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.98f else 1f, label = "hero")
     Column(
         Modifier
             .fillMaxWidth()
+            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(RoundedCornerShape(24.dp))
             .background(p.accent)
-            .clickable { onClick() }
+            .clickable(interactionSource = src, indication = null) { onClick() }
             .padding(20.dp)
     ) {
-        Text("Next up", color = Color(0xFFFFF9F4), fontSize = 13.sp)
-        Text(countdown(days), color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
-        Text("${e.name} · ${typeLabel(e)}", color = Color(0xFFFFF1EA), fontSize = 14.sp)
+        Text(stringResource(R.string.next_up), color = UiColor(0xFFFFF9F4), fontSize = 13.sp)
+        AnimatedContent(targetState = countdown(days, ctx), label = "countdown") { text ->
+            Text(text, color = UiColor.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+        }
+        Text("${e.name} · ${typeLabel(e, ctx)}", color = UiColor(0xFFFFF1EA), fontSize = 14.sp)
     }
 }
 
 @Composable
-fun EntryRow(e: Entry, p: Palette, today: LocalDate, onClick: () -> Unit) {
+fun EntryRow(e: Entry, p: Palette, today: LocalDate, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val ctx = LocalContext.current
     val next = e.next(today)
     val days = e.daysUntil(today)
     val isToday = days == 0L
     val shape = RoundedCornerShape(20.dp)
-    val base = Modifier
-        .fillMaxWidth()
-        .padding(bottom = 10.dp)
-        .clip(shape)
-        .background(if (isToday) p.today else p.card)
-    val framed = if (isToday) base.border(1.5.dp, p.accent, shape) else base
+    val src = remember { MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.97f else 1f, label = "row")
+    val bg by animateColorAsState(if (isToday) p.today else p.card, animationSpec = tween(300), label = "rowbg")
     Row(
-        framed.clickable { onClick() }.padding(14.dp),
+        modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(shape)
+            .background(bg)
+            .then(if (isToday) Modifier.border(1.5.dp, p.accent, shape) else Modifier)
+            .clickable(interactionSource = src, indication = null) { onClick() }
+            .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
@@ -472,10 +731,10 @@ fun EntryRow(e: Entry, p: Palette, today: LocalDate, onClick: () -> Unit) {
         ) {
             Text(
                 next.format(DateTimeFormatter.ofPattern("MMM", Locale.getDefault())).uppercase(),
-                color = Color(0xFFFFF9F4),
+                color = UiColor(0xFFFFF9F4),
                 fontSize = 11.sp
             )
-            Text(next.dayOfMonth.toString(), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(next.dayOfMonth.toString(), color = UiColor.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
         Column(Modifier.weight(1f)) {
             Text(
@@ -486,10 +745,16 @@ fun EntryRow(e: Entry, p: Palette, today: LocalDate, onClick: () -> Unit) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(metaLine(e, today), color = p.muted, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                metaLine(e, today, ctx),
+                color = p.muted,
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
         Text(
-            countdown(days),
+            countdown(days, ctx),
             color = if (isToday) p.accent else p.highlight,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
@@ -511,18 +776,26 @@ fun OverviewPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Un
         } else {
             val next = sorted.first()
             item {
-                Hero(next, p, today) { onOpen(next) }
-                Spacer(Modifier.height(14.dp))
+                Column {
+                    Crossfade(targetState = next, label = "hero") { e ->
+                        Hero(e, p, today) { onOpen(e) }
+                    }
+                    Spacer(Modifier.height(14.dp))
+                }
             }
             val soon = sorted.filter { it.id != next.id && it.daysUntil(today) <= 30 }
             val later = sorted.filter { it.daysUntil(today) > 30 }
             if (soon.isNotEmpty()) {
-                item { SectionLabel("Coming up", p) }
-                items(soon, key = { it.id }) { e -> EntryRow(e, p, today) { onOpen(e) } }
+                item { SectionLabel(stringResource(R.string.section_coming_up), p) }
+                items(soon, key = { it.id }) { e ->
+                    EntryRow(e, p, today, Modifier.animateItemPlacement()) { onOpen(e) }
+                }
             }
             if (later.isNotEmpty()) {
-                item { SectionLabel("Later", p) }
-                items(later, key = { it.id }) { e -> EntryRow(e, p, today) { onOpen(e) } }
+                item { SectionLabel(stringResource(R.string.section_later), p) }
+                items(later, key = { it.id }) { e ->
+                    EntryRow(e, p, today, Modifier.animateItemPlacement()) { onOpen(e) }
+                }
             }
         }
     }
@@ -539,19 +812,23 @@ fun DatesPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Unit,
         if (sorted.isEmpty()) {
             item { EmptyState(p) }
         } else {
-            item { SectionLabel("All dates", p) }
-            items(sorted, key = { it.id }) { e -> EntryRow(e, p, today) { onOpen(e) } }
+            item { SectionLabel(stringResource(R.string.section_all), p) }
+            items(sorted, key = { it.id }) { e ->
+                EntryRow(e, p, today, Modifier.animateItemPlacement()) { onOpen(e) }
+            }
         }
     }
 }
 
 @Composable
 fun CalendarPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Unit, onOpen: (Entry) -> Unit) {
+    val ctx = LocalContext.current
     var month by remember { mutableStateOf(YearMonth.from(today)) }
     var selected by remember { mutableStateOf<LocalDate?>(null) }
     val firstWeekday = month.atDay(1).dayOfWeek.value % 7
     val weeks = (firstWeekday + month.lengthOfMonth() + 6) / 7
-    val weekdayNames = listOf("S", "M", "T", "W", "T", "F", "S")
+    val weekdayNames = (0L..6L).map { DayOfWeek.SUNDAY.plus(it).getDisplayName(TextStyle.NARROW, Locale.getDefault()) }
+    val sel = selected
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -573,7 +850,7 @@ fun CalendarPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Un
         item {
             Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 weekdayNames.forEach { d ->
-                    Text(d, color = p.muted, fontSize = 12.sp, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text(d, color = p.muted, fontSize = 12.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
                 }
             }
         }
@@ -587,7 +864,7 @@ fun CalendarPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Un
                                 Spacer(Modifier.weight(1f).height(44.dp))
                             } else {
                                 val date = month.atDay(dayNumber)
-                                val isSel = selected == date
+                                val isSel = sel == date
                                 val hasEvent = all.any { matchesDay(it, date) }
                                 val isToday = date == today
                                 Column(
@@ -595,14 +872,14 @@ fun CalendarPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Un
                                         .weight(1f)
                                         .height(44.dp)
                                         .clip(CircleShape)
-                                        .background(if (isSel) p.accent else if (isToday) p.today else Color.Transparent)
+                                        .background(if (isSel) p.accent else if (isToday) p.today else UiColor.Transparent)
                                         .clickable { selected = if (isSel) null else date },
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     Text(
                                         dayNumber.toString(),
-                                        color = if (isSel) Color.White else p.ink,
+                                        color = if (isSel) UiColor.White else p.ink,
                                         fontSize = 15.sp,
                                         fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
                                     )
@@ -611,7 +888,7 @@ fun CalendarPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Un
                                             Modifier
                                                 .size(5.dp)
                                                 .clip(CircleShape)
-                                                .background(if (isSel) Color.White else p.highlight)
+                                                .background(if (isSel) UiColor.White else p.highlight)
                                         )
                                     }
                                 }
@@ -622,17 +899,19 @@ fun CalendarPage(all: List<Entry>, p: Palette, today: LocalDate, onAdd: () -> Un
             }
         }
         item {
-            val list = if (selected != null) {
-                val day = selected!!
-                all.filter { matchesDay(it, day) }
+            val list = if (sel != null) {
+                all.filter { matchesDay(it, sel) }
             } else {
                 all.filter { runCatching { LocalDate.parse(it.date).monthValue == month.monthValue }.getOrDefault(false) }
                     .sortedBy { runCatching { LocalDate.parse(it.date).dayOfMonth }.getOrDefault(0) }
             }
             Column {
-                SectionLabel(if (selected != null) "Selected day" else "This month", p)
+                SectionLabel(
+                    stringResource(if (sel != null) R.string.section_selected_day else R.string.section_this_month),
+                    p
+                )
                 if (list.isEmpty()) {
-                    Text("Nothing on this day.", color = p.muted, fontSize = 14.sp, modifier = Modifier.padding(bottom = 10.dp))
+                    Text(stringResource(R.string.nothing_on_day), color = p.muted, fontSize = 14.sp, modifier = Modifier.padding(bottom = 10.dp))
                 }
                 list.forEach { e -> EntryRow(e, p, today) { onOpen(e) } }
             }
@@ -649,6 +928,7 @@ fun EditSheet(
     onSave: (Entry) -> Unit,
     onDelete: () -> Unit
 ) {
+    val ctx = LocalContext.current
     var name by remember { mutableStateOf(existing?.name ?: "") }
     var kind by remember { mutableStateOf(existing?.type ?: "birthday") }
     var date by remember { mutableStateOf(existing?.date ?: LocalDate.now().toString()) }
@@ -669,9 +949,14 @@ fun EditSheet(
                 .padding(start = 18.dp, end = 18.dp, bottom = 30.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(if (existing == null) "New date" else "Edit date", color = p.ink, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(if (existing == null) R.string.new_date else R.string.edit_date),
+                color = p.ink,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
 
-            Text("Name", color = p.muted, fontSize = 13.sp)
+            Text(stringResource(R.string.field_name), color = p.muted, fontSize = 13.sp)
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -679,28 +964,36 @@ fun EditSheet(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Text("Type", color = p.muted, fontSize = 13.sp)
+            Text(stringResource(R.string.field_type), color = p.muted, fontSize = 13.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = kind == "birthday", onClick = { kind = "birthday" }, label = { Text("Birthday") })
-                FilterChip(selected = kind == "anniversary", onClick = { kind = "anniversary" }, label = { Text("Anniversary") })
+                FilterChip(
+                    selected = kind == "birthday",
+                    onClick = { kind = "birthday" },
+                    label = { Text(stringResource(R.string.type_birthday)) }
+                )
+                FilterChip(
+                    selected = kind == "anniversary",
+                    onClick = { kind = "anniversary" },
+                    label = { Text(stringResource(R.string.type_anniversary)) }
+                )
             }
 
-            Text("Date", color = p.muted, fontSize = 13.sp)
+            Text(stringResource(R.string.field_date), color = p.muted, fontSize = 13.sp)
             OutlinedButton(onClick = { showPicker = true }, modifier = Modifier.fillMaxWidth()) {
                 Text(prettyDate(date))
             }
 
-            Text("Remind me before", color = p.muted, fontSize = 13.sp)
+            Text(stringResource(R.string.field_remind), color = p.muted, fontSize = 13.sp)
             Row(
                 Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(0, 1, 3, 7, 14).forEach { d ->
-                    FilterChip(selected = remind == d, onClick = { remind = d }, label = { Text(remindLabel(d)) })
+                    FilterChip(selected = remind == d, onClick = { remind = d }, label = { Text(remindLabel(d, ctx)) })
                 }
             }
 
-            Text("Relationship (optional)", color = p.muted, fontSize = 13.sp)
+            Text(stringResource(R.string.field_rel), color = p.muted, fontSize = 13.sp)
             OutlinedTextField(
                 value = rel,
                 onValueChange = { rel = it },
@@ -723,10 +1016,10 @@ fun EditSheet(
                 },
                 enabled = name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Save") }
+            ) { Text(stringResource(R.string.save)) }
 
             if (existing != null) {
-                OutlinedButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) { Text("Delete") }
+                OutlinedButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.delete)) }
             }
         }
     }
@@ -753,16 +1046,40 @@ fun DatePickDialog(initial: LocalDate, onPick: (LocalDate) -> Unit, onDismiss: (
                     onPick(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
                 }
                 onDismiss()
-            }) { Text("OK") }
+            }) { Text(stringResource(R.string.ok)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     ) {
         DatePicker(state = state)
     }
 }
 
 @Composable
-fun SettingsSection(title: String, p: Palette, content: @Composable () -> Unit) {
+fun ChipRow(content: @Composable RowScope.() -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        content = content
+    )
+}
+
+@Composable
+fun SettingsHeader(title: String, p: Palette, onBack: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        TextButton(onClick = onBack) {
+            Text("‹ " + stringResource(R.string.back), color = p.accent, fontSize = 16.sp)
+        }
+        Spacer(Modifier.weight(1f))
+        Text(title, color = p.ink, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.width(96.dp))
+    }
+}
+
+@Composable
+fun SettingsCard(p: Palette, title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -777,22 +1094,44 @@ fun SettingsSection(title: String, p: Palette, content: @Composable () -> Unit) 
 }
 
 @Composable
-fun SettingsPanel(
+fun NavRow(title: String, p: Palette, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(title, color = p.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        Text("›", color = p.muted, fontSize = 20.sp)
+    }
+}
+
+@Composable
+fun SettingsMain(
     p: Palette,
     defaultView: Int,
     defaultRemind: Int,
     themeKey: String,
+    lockOn: Boolean,
+    lang: String,
     versionText: String,
     onBack: () -> Unit,
     onView: (Int) -> Unit,
     onRemind: (Int) -> Unit,
     onTheme: (String) -> Unit,
+    onLock: (Boolean) -> Unit,
+    onLang: (String) -> Unit,
     onAllowNotifications: () -> Unit,
     onTestNotification: () -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
+    onPeople: () -> Unit,
+    onAbout: () -> Unit,
     onWhatsNew: () -> Unit
 ) {
+    val ctx = LocalContext.current
     Column(
         Modifier
             .fillMaxSize()
@@ -800,30 +1139,37 @@ fun SettingsPanel(
             .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 40.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("‹ Back", color = p.accent, fontSize = 16.sp) }
-            Spacer(Modifier.weight(1f))
-            Text("Settings", color = p.ink, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.weight(1f))
-            Spacer(Modifier.size(64.dp))
-        }
+        SettingsHeader(stringResource(R.string.settings_title), p, onBack)
 
-        SettingsSection("General", p) {
-            Text("Default view", color = p.muted, fontSize = 13.sp)
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Overview", "Dates", "Calendar").forEachIndexed { i, label ->
-                    FilterChip(selected = defaultView == i, onClick = { onView(i) }, label = { Text(label) })
+        SettingsCard(p, stringResource(R.string.settings_general)) {
+            Text(stringResource(R.string.default_view), color = p.muted, fontSize = 13.sp)
+            ChipRow {
+                listOf(R.string.tab_overview, R.string.tab_dates, R.string.tab_calendar).forEachIndexed { i, id ->
+                    FilterChip(selected = defaultView == i, onClick = { onView(i) }, label = { Text(stringResource(id)) })
                 }
             }
-            Text("Default reminder for new dates", color = p.muted, fontSize = 13.sp)
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.default_remind), color = p.muted, fontSize = 13.sp)
+            ChipRow {
                 listOf(0, 1, 3, 7, 14).forEach { d ->
-                    FilterChip(selected = defaultRemind == d, onClick = { onRemind(d) }, label = { Text(remindLabel(d)) })
+                    FilterChip(selected = defaultRemind == d, onClick = { onRemind(d) }, label = { Text(remindLabel(d, ctx)) })
                 }
+            }
+            Text(stringResource(R.string.language), color = p.muted, fontSize = 13.sp)
+            ChipRow {
+                LANG_TAGS.forEachIndexed { i, tag ->
+                    FilterChip(selected = lang == tag, onClick = { onLang(tag) }, label = { Text(LANG_NAMES[i]) })
+                }
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.app_lock), color = p.ink, fontSize = 15.sp)
+                    Text(stringResource(R.string.app_lock_desc), color = p.muted, fontSize = 12.sp)
+                }
+                Switch(checked = lockOn, onCheckedChange = onLock)
             }
         }
 
-        SettingsSection("Theme", p) {
+        SettingsCard(p, stringResource(R.string.theme)) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 THEME_KEYS.forEach { key ->
                     val swatch = paletteFor(key)
@@ -838,24 +1184,99 @@ fun SettingsPanel(
                     )
                 }
             }
-            Text(THEME_LABELS[THEME_KEYS.indexOf(themeKey).coerceAtLeast(0)], color = p.ink, fontSize = 14.sp)
+            Text(stringResource(themeNameRes(themeKey)), color = p.ink, fontSize = 14.sp)
         }
 
-        SettingsSection("Notifications", p) {
-            Text("Reminders are checked once a day. Allow notifications so they can show.", color = p.muted, fontSize = 13.sp)
-            Button(onClick = onAllowNotifications, modifier = Modifier.fillMaxWidth()) { Text("Allow notifications") }
-            OutlinedButton(onClick = onTestNotification, modifier = Modifier.fillMaxWidth()) { Text("Send a test notification") }
+        SettingsCard(p, stringResource(R.string.notifications)) {
+            Text(stringResource(R.string.notif_desc), color = p.muted, fontSize = 13.sp)
+            Button(onClick = onAllowNotifications, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.allow_notifications))
+            }
+            OutlinedButton(onClick = onTestNotification, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.test_notification))
+            }
         }
 
-        SettingsSection("Data", p) {
-            Text("Backups use the same file format as the web app.", color = p.muted, fontSize = 13.sp)
-            Button(onClick = onExport, modifier = Modifier.fillMaxWidth()) { Text("Export backup") }
-            OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) { Text("Import backup") }
+        SettingsCard(p, stringResource(R.string.data)) {
+            Text(stringResource(R.string.backup_desc), color = p.muted, fontSize = 13.sp)
+            Button(onClick = onExport, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.export_backup)) }
+            OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.import_backup)) }
         }
 
-        SettingsSection("Info", p) {
-            Text(versionText, color = p.ink, fontSize = 14.sp)
-            OutlinedButton(onClick = onWhatsNew, modifier = Modifier.fillMaxWidth()) { Text("What's new") }
+        SettingsCard(p, stringResource(R.string.people)) {
+            NavRow(stringResource(R.string.people_desc), p, onPeople)
+        }
+
+        SettingsCard(p, stringResource(R.string.info)) {
+            NavRow(stringResource(R.string.about), p, onAbout)
+            NavRow(stringResource(R.string.whats_new), p, onWhatsNew)
+            Text(versionText, color = p.muted, fontSize = 13.sp)
+        }
+
+        Text(
+            stringResource(R.string.built_with),
+            color = p.muted,
+            fontSize = 13.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+        )
+    }
+}
+
+@Composable
+fun PeoplePage(
+    all: List<Entry>,
+    p: Palette,
+    today: LocalDate,
+    onBack: () -> Unit,
+    onOpen: (Entry) -> Unit,
+    onDelete: (String) -> Unit
+) {
+    val ctx = LocalContext.current
+    val groups = all.groupBy { it.name }.toList().sortedBy { it.first.lowercase() }
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 40.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        SettingsHeader(stringResource(R.string.people_title), p, onBack)
+        Text(stringResource(R.string.people_desc), color = p.muted, fontSize = 13.sp)
+        if (groups.isEmpty()) {
+            Text(stringResource(R.string.people_empty), color = p.muted, fontSize = 14.sp)
+        }
+        groups.forEach { (name, list) ->
+            SettingsCard(p, name) {
+                Text(
+                    ctx.resources.getQuantityString(R.plurals.person_dates, list.size, list.size),
+                    color = p.muted,
+                    fontSize = 13.sp
+                )
+                list.sortedBy { it.daysUntil(today) }.forEach { e ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onOpen(e) }
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "${prettyDate(e.date)} · ${typeLabel(e, ctx)}",
+                            color = p.ink,
+                            fontSize = 14.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(countdown(e.daysUntil(today), ctx), color = p.highlight, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                TextButton(onClick = { onDelete(name) }) {
+                    Text(stringResource(R.string.delete_person), color = p.accent)
+                }
+            }
         }
     }
 }
