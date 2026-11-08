@@ -41,6 +41,12 @@ jobs:
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --locked
 
+      - name: Locate Android platform jar
+        run: |
+          JAR=$(ls -d "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -1)
+          echo "Using $JAR"
+          echo "ANDROID_JAR=$JAR" >> "$GITHUB_ENV"
+
       - name: Build Rust library for arm64
         working-directory: app-rust
         run: cargo ndk -t arm64-v8a -P 26 -o android/app/src/main/jniLibs build --release --lib
