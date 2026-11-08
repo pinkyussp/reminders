@@ -106,7 +106,8 @@ fun paletteFor(key: String): Palette = when (key) {
 }
 
 fun schemeFor(p: Palette): ColorScheme {
-    val base = if (p.bg.luminance() < 0.5f) darkColorScheme() else lightColorScheme()
+    val brightness = 0.2126f * p.bg.red + 0.7152f * p.bg.green + 0.0722f * p.bg.blue
+    val base = if (brightness < 0.5f) darkColorScheme() else lightColorScheme()
     return base.copy(
         primary = p.accent,
         onPrimary = Color.White,
