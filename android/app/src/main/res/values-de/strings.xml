@@ -92,4 +92,10 @@
     <string name="filter_birthdays">Geburtstage</string>
     <string name="filter_anniversaries">Jahrestage</string>
     <string name="created_by">Erstellt von aym</string>
+    <string name="notif_today_birthday">🎂 Heute ist %1$s’s Geburtstag!</string>
+    <string name="notif_today_anniv">💍 Heute ist %1$s’s Jahrestag!</string>
+    <string name="notif_today_text">Schick ein bisschen Liebe 💕</string>
+    <string name="notif_soon_birthday">🎁 %1$s’s Geburtstag steht bevor</string>
+    <string name="notif_soon_anniv">💌 %1$s’s Jahrestag steht bevor</string>
+    <string name="notif_soon_text">In %1$s. Plane etwas Schönes.</string>
 </resources>

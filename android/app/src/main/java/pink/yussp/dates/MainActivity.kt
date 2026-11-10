@@ -5,6 +5,7 @@ package pink.yussp.dates
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
@@ -55,6 +56,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -117,6 +119,10 @@ val LANG_TAGS = listOf("en", "fr", "es", "de", "pt")
 val LANG_NAMES = listOf("English", "Français", "Español", "Deutsch", "Português")
 const val WEBSITE_URL = "https://dates.yussp.pink"
 
+object PendingOpen {
+    var entryId by mutableStateOf<String?>(null)
+}
+
 object LockState {
     var started = false
     var locked by mutableStateOf(false)
@@ -130,7 +136,13 @@ class MainActivity : AppCompatActivity() {
             LockState.started = true
             if (Store.prefs(this).getBoolean("lock_enabled", false)) LockState.locked = true
         }
+        PendingOpen.entryId = intent?.getStringExtra(Reminders.EXTRA_ENTRY_ID)
         setContent { DatesRoot(this) }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent.getStringExtra(Reminders.EXTRA_ENTRY_ID)?.let { PendingOpen.entryId = it }
     }
 
     override fun onStop() {
@@ -335,6 +347,12 @@ fun DatesRoot(activity: AppCompatActivity) {
         if (LockState.locked) promptUnlock(activity)
     }
 
+    LaunchedEffect(PendingOpen.entryId) {
+        val id = PendingOpen.entryId ?: return@LaunchedEffect
+        PendingOpen.entryId = null
+        entries.firstOrNull { it.id == id }?.let { openEdit(it) }
+    }
+
     val notifyPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         say(ctx.getString(if (granted) R.string.notif_on else R.string.notif_blocked))
     }
@@ -368,7 +386,7 @@ fun DatesRoot(activity: AppCompatActivity) {
 
             TabBar(
                 p = p,
-                selected = pagerState.currentPage,
+                pagerState = pagerState,
                 onSelect = { i -> scope.launch { pagerState.animateScrollToPage(i) } },
                 onSettings = {
                     settingsPage = SettingsPage.Main
@@ -608,7 +626,7 @@ fun sortByDays(list: List<Entry>, today: LocalDate): List<Entry> =
     list.map { it to it.daysUntil(today) }.sortedBy { it.second }.map { it.first }
 
 @Composable
-fun TabBar(p: Palette, selected: Int, onSelect: (Int) -> Unit, onSettings: () -> Unit, modifier: Modifier) {
+fun TabBar(p: Palette, pagerState: PagerState, onSelect: (Int) -> Unit, onSettings: () -> Unit, modifier: Modifier) {
     val labels = listOf(R.string.tab_overview, R.string.tab_dates, R.string.tab_calendar)
     Row(
         modifier
@@ -624,7 +642,7 @@ fun TabBar(p: Palette, selected: Int, onSelect: (Int) -> Unit, onSettings: () ->
         labels.forEachIndexed { i, id ->
             TabItem(
                 label = stringResource(id),
-                active = i == selected,
+                active = i == pagerState.currentPage,
                 p = p,
                 modifier = Modifier.weight(1f),
                 onClick = { onSelect(i) }

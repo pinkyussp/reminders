@@ -1,7 +1,6 @@
-## 1.0.11
-The app now looks and works like the web app.
+## Latest
+Birthdays and anniversaries now get their own notification on the day, with a little cheer.
 
-- Launcher icon from the web app
-- A proper lock icon on the lock screen
-- Smoother screens with less lag
-- Creator credit is now "aym", shown in About
+- Notifications on the day of each birthday and anniversary, as well as before
+- Tap a notification to open that date in the app
+- Smoother swiping between Overview, Dates and Calendar

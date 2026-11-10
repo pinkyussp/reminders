@@ -92,4 +92,10 @@
     <string name="filter_birthdays">Birthdays</string>
     <string name="filter_anniversaries">Anniversaries</string>
     <string name="created_by">Created by aym</string>
+    <string name="notif_today_birthday">🎂 Today is %1$s’s birthday!</string>
+    <string name="notif_today_anniv">💍 Today is %1$s’s anniversary!</string>
+    <string name="notif_today_text">Send them some love 💕</string>
+    <string name="notif_soon_birthday">🎁 %1$s’s birthday is coming up</string>
+    <string name="notif_soon_anniv">💌 %1$s’s anniversary is coming up</string>
+    <string name="notif_soon_text">In %1$s. Plan something sweet.</string>
 </resources>
